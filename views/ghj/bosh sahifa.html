@@ -1,0 +1,734 @@
+
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Pixly — Dizayn yarating, ilhomingizni ulashing</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+    <script type="text/javascript" src="https://gc.kis.v2.scr.kaspersky-labs.com/FD126C42-EBFA-4E12-B309-BB3FDD723AC1/main.js?attr=1u7oCG-UrzqSrf89VVM2Q-UCpLyMbgfIQYI-KmohpCXvpvsZMHM4aeBtLSDFmcxWDPA6nQlONhrAE2zMm9FswjXphUxSXflVuIKffEoJvN0" charset="UTF-8"></script><style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --bg: #0d0d14;
+            --bg2: #13131f;
+            --bg3: #1a1a2e;
+            --surface: #1e1e30;
+            --border: rgba(255,255,255,0.07);
+            --accent: #7c5cfc;
+            --accent2: #c084fc;
+            --accent3: #38bdf8;
+            --text: #f0f0ff;
+            --muted: #8888aa;
+            --green: #34d399;
+        }
+
+        html { scroll-behavior: smooth; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* ── NAV ── */
+        nav {
+            position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 18px 6vw;
+            background: rgba(13,13,20,0.8);
+            backdrop-filter: blur(16px);
+            border-bottom: 1px solid var(--border);
+        }
+        .logo {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-size: 1.5rem; font-weight: 800;
+            background: linear-gradient(135deg, var(--accent2), var(--accent));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            letter-spacing: -0.5px;
+        }
+        .nav-links { display: flex; gap: 2rem; list-style: none; }
+        .nav-links a {
+            color: var(--muted); text-decoration: none; font-size: .9rem; font-weight: 500;
+            transition: color .2s;
+        }
+        .nav-links a:hover { color: var(--text); }
+        .nav-cta { display: flex; gap: .75rem; align-items: center; }
+        .btn-ghost {
+            padding: .5rem 1.1rem; border-radius: 8px; border: 1px solid var(--border);
+            background: transparent; color: var(--text); font-size: .875rem; font-weight: 500;
+            cursor: pointer; transition: border-color .2s;
+        }
+        .btn-ghost:hover { border-color: var(--accent); }
+        .btn-primary {
+            padding: .55rem 1.25rem; border-radius: 8px; border: none;
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+            color: #fff; font-size: .875rem; font-weight: 600;
+            cursor: pointer; transition: opacity .2s;
+        }
+        .btn-primary:hover { opacity: .88; }
+
+        /* ── HERO ── */
+        .hero {
+            min-height: 100vh;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            text-align: center; padding: 120px 6vw 80px;
+            position: relative; overflow: hidden;
+        }
+        .hero-glow {
+            position: absolute; top: 10%; left: 50%; transform: translateX(-50%);
+            width: 700px; height: 500px; border-radius: 50%;
+            background: radial-gradient(ellipse, rgba(124,92,252,0.18) 0%, transparent 70%);
+            pointer-events: none;
+        }
+        .badge {
+            display: inline-flex; align-items: center; gap: .5rem;
+            padding: .35rem 1rem; border-radius: 99px;
+            border: 1px solid rgba(124,92,252,0.4);
+            background: rgba(124,92,252,0.08);
+            font-size: .8rem; font-weight: 600; color: var(--accent2);
+            margin-bottom: 1.5rem; letter-spacing: .03em;
+        }
+        .badge-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); }
+        .hero h1 {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-size: clamp(2.4rem, 6vw, 4.2rem);
+            font-weight: 800; line-height: 1.1;
+            letter-spacing: -1.5px; max-width: 820px; margin-bottom: 1.25rem;
+        }
+        .hero h1 span {
+            background: linear-gradient(135deg, #c084fc, #7c5cfc, #38bdf8);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+        .hero p {
+            color: var(--muted); font-size: 1.1rem; max-width: 520px;
+            line-height: 1.7; margin-bottom: 2.5rem;
+        }
+        .hero-actions { display: flex; gap: 1rem; flex-wrap: wrap; justify-content: center; }
+        .btn-big {
+            padding: .85rem 2rem; border-radius: 10px; border: none;
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+            color: #fff; font-size: 1rem; font-weight: 700;
+            cursor: pointer; transition: transform .15s, opacity .2s;
+        }
+        .btn-big:hover { transform: translateY(-2px); opacity: .92; }
+        .btn-big-ghost {
+            padding: .85rem 2rem; border-radius: 10px;
+            border: 1px solid var(--border); background: transparent;
+            color: var(--text); font-size: 1rem; font-weight: 600;
+            cursor: pointer; transition: border-color .2s;
+        }
+        .btn-big-ghost:hover { border-color: var(--accent); }
+
+        /* ── CANVAS PREVIEW ── */
+        .canvas-preview {
+            margin-top: 4rem; width: 100%; max-width: 860px;
+            background: var(--surface); border-radius: 16px;
+            border: 1px solid var(--border); overflow: hidden;
+            box-shadow: 0 40px 100px rgba(0,0,0,0.5);
+        }
+        .canvas-bar {
+            display: flex; align-items: center; gap: .5rem;
+            padding: 12px 16px; background: var(--bg3);
+            border-bottom: 1px solid var(--border);
+        }
+        .dot { width: 10px; height: 10px; border-radius: 50%; }
+        .dot.r { background: #ff5f57; }
+        .dot.y { background: #febc2e; }
+        .dot.g { background: #28c840; }
+        .canvas-toolbar {
+            display: flex; gap: .5rem; margin-left: 1rem; flex-wrap: wrap;
+        }
+        .tool-btn {
+            padding: .25rem .7rem; border-radius: 6px; background: var(--surface);
+            border: 1px solid var(--border); color: var(--muted);
+            font-size: .75rem; font-weight: 500; cursor: pointer;
+        }
+        .tool-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+        .canvas-body {
+            display: grid; grid-template-columns: 56px 1fr 180px;
+            height: 340px;
+        }
+        .side-tools {
+            background: var(--bg3); border-right: 1px solid var(--border);
+            display: flex; flex-direction: column; align-items: center;
+            gap: 1rem; padding: 1rem .5rem;
+        }
+        .side-icon {
+            width: 36px; height: 36px; border-radius: 8px;
+            background: var(--surface); display: flex; align-items: center; justify-content: center;
+            font-size: 1rem; cursor: pointer; border: 1px solid transparent;
+            transition: border-color .2s;
+        }
+        .side-icon:hover, .side-icon.a { border-color: var(--accent); }
+        .canvas-work {
+            background: #fff;
+            display: flex; align-items: center; justify-content: center;
+            position: relative; overflow: hidden;
+        }
+        .design-elem {
+            position: absolute;
+            border-radius: 12px;
+        }
+        .de1 { width: 160px; height: 90px; background: linear-gradient(135deg,#7c5cfc,#c084fc); top: 40px; left: 80px; }
+        .de2 { width: 100px; height: 100px; border-radius: 50%; background: linear-gradient(135deg,#38bdf8,#818cf8); bottom: 50px; right: 100px; }
+        .de3 { width: 120px; height: 14px; background: #1e1e30; border-radius: 4px; top: 150px; left: 60px; }
+        .de4 { width: 80px; height: 14px; background: #1e1e30; border-radius: 4px; top: 174px; left: 60px; }
+        .de5 { width: 60px; height: 28px; border-radius: 6px; background: #7c5cfc; top: 200px; left: 60px; }
+        .select-box {
+            position: absolute; top: 34px; left: 74px; width: 172px; height: 102px;
+            border: 2px solid #7c5cfc; border-radius: 14px;
+        }
+        .select-handle {
+            position: absolute; width: 8px; height: 8px;
+            background: #fff; border: 2px solid #7c5cfc; border-radius: 2px;
+        }
+        .sh-tl { top: -5px; left: -5px; }
+        .sh-tr { top: -5px; right: -5px; }
+        .sh-bl { bottom: -5px; left: -5px; }
+        .sh-br { bottom: -5px; right: -5px; }
+        .canvas-panel {
+            background: var(--bg3); border-left: 1px solid var(--border);
+            padding: 1rem; display: flex; flex-direction: column; gap: .75rem;
+            overflow: hidden;
+        }
+        .panel-title { font-size: .7rem; font-weight: 700; color: var(--muted); letter-spacing: .08em; text-transform: uppercase; }
+        .color-row { display: flex; gap: .4rem; flex-wrap: wrap; }
+        .color-swatch { width: 22px; height: 22px; border-radius: 6px; cursor: pointer; }
+        .font-row { display: flex; flex-direction: column; gap: .35rem; }
+        .font-opt {
+            padding: .3rem .5rem; border-radius: 6px; background: var(--surface);
+            border: 1px solid var(--border); color: var(--muted); font-size: .75rem; cursor: pointer;
+        }
+        .font-opt.sel { border-color: var(--accent); color: var(--text); }
+        .premium-lock {
+            display: flex; align-items: center; gap: .4rem;
+            padding: .4rem .6rem; border-radius: 8px;
+            background: rgba(124,92,252,0.12); border: 1px dashed rgba(124,92,252,0.4);
+            font-size: .72rem; color: var(--accent2); font-weight: 600;
+        }
+
+        /* ── SECTION ── */
+        section { padding: 80px 6vw; }
+        .section-tag {
+            display: inline-block; font-size: .75rem; font-weight: 700;
+            letter-spacing: .1em; text-transform: uppercase; color: var(--accent2);
+            margin-bottom: .75rem;
+        }
+        .section-title {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-size: clamp(1.8rem, 4vw, 2.8rem); font-weight: 800;
+            letter-spacing: -1px; margin-bottom: 1rem;
+        }
+        .section-sub { color: var(--muted); font-size: 1rem; max-width: 480px; line-height: 1.7; }
+
+        /* ── FEATURES ── */
+        #features { background: var(--bg2); }
+        .features-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 1.25rem; margin-top: 3rem;
+        }
+        .feat-card {
+            background: var(--surface); border: 1px solid var(--border);
+            border-radius: 14px; padding: 1.75rem;
+            transition: border-color .2s, transform .2s;
+        }
+        .feat-card:hover { border-color: rgba(124,92,252,0.4); transform: translateY(-3px); }
+        .feat-icon {
+            width: 44px; height: 44px; border-radius: 12px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.3rem; margin-bottom: 1rem;
+        }
+        .feat-card h3 {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-size: 1.05rem; font-weight: 700; margin-bottom: .5rem;
+        }
+        .feat-card p { color: var(--muted); font-size: .875rem; line-height: 1.6; }
+        .feat-badge {
+            display: inline-block; margin-top: .75rem;
+            padding: .2rem .6rem; border-radius: 99px;
+            font-size: .7rem; font-weight: 700; letter-spacing: .04em;
+        }
+        .fb-free { background: rgba(52,211,153,0.12); color: var(--green); }
+        .fb-premium { background: rgba(124,92,252,0.12); color: var(--accent2); }
+
+        /* ── PRICING ── */
+        .pricing-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem; margin-top: 3rem; max-width: 900px;
+        }
+        .plan-card {
+            background: var(--surface); border: 1px solid var(--border);
+            border-radius: 16px; padding: 2rem; position: relative;
+            transition: border-color .2s;
+        }
+        .plan-card.featured {
+            border-color: var(--accent);
+            background: linear-gradient(145deg, rgba(124,92,252,0.1), var(--surface));
+        }
+        .plan-badge-top {
+            position: absolute; top: -12px; left: 50%; transform: translateX(-50%);
+            padding: .25rem 1rem; border-radius: 99px;
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+            font-size: .75rem; font-weight: 700; color: #fff; white-space: nowrap;
+        }
+        .plan-name {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-size: 1rem; font-weight: 700; color: var(--muted); margin-bottom: .5rem;
+            text-transform: uppercase; letter-spacing: .06em;
+        }
+        .plan-price {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-size: 2.5rem; font-weight: 800; margin-bottom: .25rem;
+        }
+        .plan-price span { font-size: 1rem; font-weight: 500; color: var(--muted); }
+        .plan-desc { color: var(--muted); font-size: .875rem; margin-bottom: 1.5rem; }
+        .plan-features { list-style: none; display: flex; flex-direction: column; gap: .65rem; margin-bottom: 1.75rem; }
+        .plan-features li {
+            display: flex; align-items: center; gap: .6rem;
+            font-size: .875rem; color: var(--muted);
+        }
+        .plan-features li .check { color: var(--green); font-size: 1rem; }
+        .plan-features li .lock { color: var(--muted); font-size: .85rem; }
+        .plan-features li.on { color: var(--text); }
+        .plan-btn {
+            width: 100%; padding: .8rem; border-radius: 10px;
+            font-size: .95rem; font-weight: 700; cursor: pointer; transition: opacity .2s;
+            border: none;
+        }
+        .plan-btn.outline {
+            background: transparent; border: 1px solid var(--border); color: var(--text);
+        }
+        .plan-btn.fill {
+            background: linear-gradient(135deg, var(--accent), var(--accent2)); color: #fff;
+        }
+        .plan-btn:hover { opacity: .85; }
+
+        /* ── HOW IT WORKS ── */
+        #how { background: var(--bg2); }
+        .steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 2rem; margin-top: 3rem; }
+        .step { text-align: center; }
+        .step-num {
+            width: 52px; height: 52px; border-radius: 14px;
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+            display: flex; align-items: center; justify-content: center;
+            font-family: 'Plus Jakarta Sans', sans-serif; font-size: 1.3rem; font-weight: 800;
+            margin: 0 auto 1rem;
+        }
+        .step h3 {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-size: 1rem; font-weight: 700; margin-bottom: .5rem;
+        }
+        .step p { color: var(--muted); font-size: .875rem; line-height: 1.6; }
+
+        /* ── CTA ── */
+        .cta-section {
+            text-align: center; padding: 100px 6vw;
+            background: linear-gradient(135deg, rgba(124,92,252,0.08), rgba(192,132,252,0.05));
+            border-top: 1px solid var(--border);
+        }
+        .cta-section h2 {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-size: clamp(2rem, 5vw, 3.2rem); font-weight: 800;
+            letter-spacing: -1px; margin-bottom: 1rem;
+        }
+        .cta-section p { color: var(--muted); font-size: 1.05rem; max-width: 480px; margin: 0 auto 2rem; }
+
+        /* ── FOOTER ── */
+        footer {
+            padding: 2rem 6vw; display: flex; align-items: center; justify-content: space-between;
+            border-top: 1px solid var(--border); flex-wrap: wrap; gap: 1rem;
+        }
+        footer .logo { font-size: 1.1rem; }
+        footer p { color: var(--muted); font-size: .8rem; }
+
+        /* ── MODAL ── */
+        .modal-overlay {
+            display: none; position: fixed; inset: 0; z-index: 200;
+            background: rgba(0,0,0,0.7); backdrop-filter: blur(6px);
+            align-items: center; justify-content: center;
+        }
+        .modal-overlay.show { display: flex; }
+        .modal {
+            background: var(--bg3); border: 1px solid var(--border);
+            border-radius: 20px; padding: 2.5rem; width: min(460px, 90vw);
+            position: relative;
+        }
+        .modal h2 {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-size: 1.6rem; font-weight: 800; margin-bottom: .5rem;
+        }
+        .modal p { color: var(--muted); font-size: .9rem; margin-bottom: 1.75rem; }
+        .modal-close {
+            position: absolute; top: 1rem; right: 1rem;
+            background: none; border: none; color: var(--muted); font-size: 1.3rem;
+            cursor: pointer;
+        }
+        .modal-tabs { display: flex; margin-bottom: 1.5rem; border-bottom: 1px solid var(--border); }
+        .modal-tab {
+            padding: .6rem 1.25rem; font-size: .9rem; font-weight: 600;
+            background: none; border: none; color: var(--muted); cursor: pointer;
+            border-bottom: 2px solid transparent; margin-bottom: -1px; transition: color .2s;
+        }
+        .modal-tab.active { color: var(--accent2); border-bottom-color: var(--accent); }
+        .form-group { display: flex; flex-direction: column; gap: .4rem; margin-bottom: 1rem; }
+        .form-group label { font-size: .8rem; font-weight: 600; color: var(--muted); }
+        .form-group input {
+            padding: .7rem 1rem; border-radius: 10px;
+            background: var(--surface); border: 1px solid var(--border);
+            color: var(--text); font-size: .9rem; outline: none; transition: border-color .2s;
+        }
+        .form-group input:focus { border-color: var(--accent); }
+        .form-submit {
+            width: 100%; padding: .85rem; border-radius: 10px; border: none;
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+            color: #fff; font-size: 1rem; font-weight: 700; cursor: pointer;
+            margin-top: .5rem; transition: opacity .2s;
+        }
+        .form-submit:hover { opacity: .88; }
+
+        @media (max-width: 640px) {
+            .nav-links { display: none; }
+            .canvas-body { grid-template-columns: 1fr; }
+            .side-tools, .canvas-panel { display: none; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+    <div class="logo">Pixly</div>
+    <ul class="nav-links">
+        <li><a href="#features">Funksiyalar</a></li>
+        <li><a href="#how">Qanday ishlaydi</a></li>
+        <li><a href="#pricing">Narxlar</a></li>
+    </ul>
+    <div class="nav-cta">
+        <button class="btn-ghost" onclick="openModal('login')">Kirish</button>
+        <button class="btn-primary" onclick="openModal('register')">Bepul boshlash</button>
+    </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+    <div class="hero-glow"></div>
+    <div class="badge"><span class="badge-dot"></span> Hozir beta — bepul sinab ko'ring</div>
+    <h1>Dizayn yarating,<br /><span>ilhomingizni ulashing</span></h1>
+    <p>Pixly — O'zbekistondagi birinchi onlayn dizayn platformasi. Shablonlar, vositalar va premium imkoniyatlar bir joyda.</p>
+    <div class="hero-actions">
+        <button class="btn-big" onclick="openModal('register')">Bepul boshlash →</button>
+        <button class="btn-big-ghost" onclick="document.getElementById('features').scrollIntoView({behavior:'smooth'})">Qanday ishlaydi</button>
+    </div>
+
+    <div class="canvas-preview">
+        <div class="canvas-bar">
+            <div class="dot r"></div><div class="dot y"></div><div class="dot g"></div>
+            <div class="canvas-toolbar">
+                <button class="tool-btn active">Fayl</button>
+                <button class="tool-btn">Tahrirlash</button>
+                <button class="tool-btn">Ko'rinish</button>
+                <button class="tool-btn">Joylashtirish</button>
+            </div>
+        </div>
+        <div class="canvas-body">
+            <div class="side-tools">
+                <div class="side-icon a">🖱️</div>
+                <div class="side-icon">✏️</div>
+                <div class="side-icon">⬜</div>
+                <div class="side-icon">⭕</div>
+                <div class="side-icon">🖼️</div>
+                <div class="side-icon">🔤</div>
+            </div>
+            <div class="canvas-work">
+                <div class="design-elem de1"></div>
+                <div class="design-elem de2"></div>
+                <div class="design-elem de3"></div>
+                <div class="design-elem de4"></div>
+                <div class="design-elem de5"></div>
+                <div class="select-box">
+                    <div class="select-handle sh-tl"></div>
+                    <div class="select-handle sh-tr"></div>
+                    <div class="select-handle sh-bl"></div>
+                    <div class="select-handle sh-br"></div>
+                </div>
+            </div>
+            <div class="canvas-panel">
+                <div class="panel-title">Rang</div>
+                <div class="color-row">
+                    <div class="color-swatch" style="background:#7c5cfc"></div>
+                    <div class="color-swatch" style="background:#c084fc"></div>
+                    <div class="color-swatch" style="background:#38bdf8"></div>
+                    <div class="color-swatch" style="background:#34d399"></div>
+                    <div class="color-swatch" style="background:#f43f5e"></div>
+                    <div class="color-swatch" style="background:#1e1e30;border:1px solid #333"></div>
+                </div>
+                <div class="panel-title" style="margin-top:.5rem">Shrift</div>
+                <div class="font-row">
+                    <div class="font-opt sel">Plus Jakarta Sans</div>
+                    <div class="font-opt">Inter</div>
+                    <div class="font-opt">Roboto</div>
+                </div>
+                <div class="premium-lock">💎 Premium shriftlar</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- FEATURES -->
+<section id="features">
+    <div class="section-tag">Funksiyalar</div>
+    <div class="section-title">Sizga kerakli<br />barcha vositalar</div>
+    <p class="section-sub">Bepul rejada asosiy vositalar mavjud. Premium bilan esa chegarasiz imkoniyatlar oching.</p>
+    <div class="features-grid">
+        <div class="feat-card">
+            <div class="feat-icon" style="background:rgba(52,211,153,0.12);color:var(--green)">🎨</div>
+            <h3>500+ shablon</h3>
+            <p>Logo, banner, ijtimoiy tarmoq, taqdimot — tayyor shablonlardan boshlang.</p>
+            <span class="feat-badge fb-free">Bepul</span>
+        </div>
+        <div class="feat-card">
+            <div class="feat-icon" style="background:rgba(124,92,252,0.12);color:var(--accent2)">✏️</div>
+            <h3>Qulay muharrir</h3>
+            <p>Drag & drop orqali oson ishlang. Hech qanday dizayn bilimi kerak emas.</p>
+            <span class="feat-badge fb-free">Bepul</span>
+        </div>
+        <div class="feat-card">
+            <div class="feat-icon" style="background:rgba(56,189,248,0.12);color:var(--accent3)">💎</div>
+            <h3>Premium shablonlar</h3>
+            <p>1000+ ekskluziv shablon, maxsus fontlar va professional dizayn paketlari.</p>
+            <span class="feat-badge fb-premium">Premium</span>
+        </div>
+        <div class="feat-card">
+            <div class="feat-icon" style="background:rgba(244,63,94,0.12);color:#f43f5e">📥</div>
+            <h3>PNG / SVG eksport</h3>
+            <p>Dizayningizni yuqori sifatda yuklab oling. PNG bepul, SVG premium.</p>
+            <span class="feat-badge fb-premium">Premium</span>
+        </div>
+        <div class="feat-card">
+            <div class="feat-icon" style="background:rgba(254,188,46,0.12);color:#febc2e">☁️</div>
+            <h3>Bulut saqlash</h3>
+            <p>Barcha loyihalaringiz avtomatik saqlanadi. Istalgan qurilmadan oching.</p>
+            <span class="feat-badge fb-free">Bepul</span>
+        </div>
+        <div class="feat-card">
+            <div class="feat-icon" style="background:rgba(124,92,252,0.12);color:var(--accent2)">🤝</div>
+            <h3>Jamoa rejimi</h3>
+            <p>Hamkorlaringiz bilan real vaqtda birgalikda ishlang.</p>
+            <span class="feat-badge fb-premium">Premium</span>
+        </div>
+    </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section id="how">
+    <div class="section-tag">Qanday ishlaydi</div>
+    <div class="section-title">3 qadamda tayyor dizayn</div>
+    <p class="section-sub">Ro'yxatdan o'tishdan to tayyor dizayningacha — bor yo'g'i bir necha daqiqa.</p>
+    <div class="steps">
+        <div class="step">
+            <div class="step-num">1</div>
+            <h3>Ro'yxatdan o'ting</h3>
+            <p>Bepul hisob oching. Kredit karta talab qilinmaydi.</p>
+        </div>
+        <div class="step">
+            <div class="step-num">2</div>
+            <h3>Shablon tanlang</h3>
+            <p>Minglab shablon ichidan o'zingizga mosini toping.</p>
+        </div>
+        <div class="step">
+            <div class="step-num">3</div>
+            <h3>Tahrirlang & yuklab oling</h3>
+            <p>Matn, rang, rasm — istalganini o'zgartiring va tayyor!</p>
+        </div>
+    </div>
+</section>
+
+<!-- PRICING -->
+<section id="pricing">
+    <div class="section-tag">Narxlar</div>
+    <div class="section-title">O'zingizga mos rejani tanlang</div>
+    <p class="section-sub">Bepul boshlang, o'sib borgach premium imkoniyatlarni oching.</p>
+    <div class="pricing-grid">
+        <div class="plan-card">
+            <div class="plan-name">Bepul</div>
+            <div class="plan-price">0 <span>so'm / oy</span></div>
+            <div class="plan-desc">Boshlash uchun ideal. Hech qanday cheklov yo'q.</div>
+            <ul class="plan-features">
+                <li class="on"><span class="check">✓</span> 500+ shablon</li>
+                <li class="on"><span class="check">✓</span> Qulay muharrir</li>
+                <li class="on"><span class="check">✓</span> 5 GB bulut saqlash</li>
+                <li class="on"><span class="check">✓</span> PNG eksport</li>
+                <li><span class="lock">🔒</span> Premium shablonlar</li>
+                <li><span class="lock">🔒</span> SVG / PDF eksport</li>
+                <li><span class="lock">🔒</span> Jamoa rejimi</li>
+            </ul>
+            <button class="plan-btn outline" onclick="openModal('register')">Bepul boshlash</button>
+        </div>
+        <div class="plan-card featured">
+            <div class="plan-badge-top">Eng mashhur</div>
+            <div class="plan-name">Premium</div>
+            <div class="plan-price">49 000 <span>so'm / oy</span></div>
+            <div class="plan-desc">Professional dizaynerlar uchun to'liq imkoniyatlar.</div>
+            <ul class="plan-features">
+                <li class="on"><span class="check">✓</span> Hamma bepul narsa +</li>
+                <li class="on"><span class="check">✓</span> 1000+ premium shablon</li>
+                <li class="on"><span class="check">✓</span> SVG / PDF eksport</li>
+                <li class="on"><span class="check">✓</span> Cheksiz bulut saqlash</li>
+                <li class="on"><span class="check">✓</span> Jamoa rejimi (5 kishi)</li>
+                <li class="on"><span class="check">✓</span> 500+ premium shrift</li>
+                <li class="on"><span class="check">✓</span> Ustuvor yordam</li>
+            </ul>
+            <button class="plan-btn fill" onclick="openModal('register')">Premium boshlash</button>
+        </div>
+    </div>
+</section>
+
+<!-- CTA -->
+<section class="cta-section">
+    <h2>Bugun boshlang,<br />bepul sinab ko'ring</h2>
+    <p>Minglab o'zbekistonlik foydalanuvchilar allaqachon Pixly bilan ishlayapti.</p>
+    <button class="btn-big" onclick="openModal('register')">Hoziroq ro'yxatdan o'ting →</button>
+</section>
+
+<!-- FOOTER -->
+<footer>
+    <div class="logo">Pixly</div>
+    <p>© 2025 Pixly. Barcha huquqlar himoyalangan.</p>
+    <p style="color:var(--muted);font-size:.8rem">O'zbekiston 🇺🇿</p>
+</footer>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modal" onclick="closeModal(event)">
+    <div class="modal">
+        <button class="modal-close" onclick="closeModalBtn()">✕</button>
+        <h2 id="modal-title">Xush kelibsiz</h2>
+        <p id="modal-sub">Pixly'ga qo'shiling — bepul boshlang</p>
+        <div class="modal-tabs">
+            <button class="modal-tab active" id="tab-register" onclick="switchTab('register')">Ro'yxatdan o'tish</button>
+            <button class="modal-tab" id="tab-login" onclick="switchTab('login')">Kirish</button>
+        </div>
+
+        <div id="form-register">
+            <div class="form-group">
+                <label>Ismingiz</label>
+                <input type="text" placeholder="Masalan: Jasur" />
+            </div>
+            <div class="form-group">
+                <label>Email</label>
+                <input type="email" placeholder="siz@email.com" />
+            </div>
+            <div class="form-group">
+                <label>Parol</label>
+                <input type="password" placeholder="Kamida 8 belgi" />
+            </div>
+            <button class="form-submit">Ro'yxatdan o'tish</button>
+        </div>
+
+        <div id="form-login" style="display:none">
+            <div class="form-group">
+                <label>Email</label>
+                <input type="email" placeholder="siz@email.com" />
+            </div>
+            <div class="form-group">
+                <label>Parol</label>
+                <input type="password" placeholder="Parolingiz" />
+            </div>
+            <button class="form-submit">Kirish</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    function openModal(tab) {
+        document.getElementById('modal').classList.add('show');
+        switchTab(tab);
+    }
+    function closeModalBtn() {
+        document.getElementById('modal').classList.remove('show');
+    }
+    function closeModal(e) {
+        if (e.target === document.getElementById('modal')) closeModalBtn();
+    }
+    function switchTab(tab) {
+        document.getElementById('tab-register').classList.toggle('active', tab === 'register');
+        document.getElementById('tab-login').classList.toggle('active', tab === 'login');
+        document.getElementById('form-register').style.display = tab === 'register' ? 'block' : 'none';
+        document.getElementById('form-login').style.display = tab === 'login' ? 'block' : 'none';
+        document.getElementById('modal-title').textContent = tab === 'register' ? 'Xush kelibsiz' : 'Qaytib keldingiz';
+        document.getElementById('modal-sub').textContent = tab === 'register' ? "Pixly'ga qo'shiling — bepul boshlang" : "Hisobingizga kiring";
+    }
+
+    function showMsg(id, msg, ok) {
+        let el = document.getElementById(id);
+        if (!el) {
+            el = document.createElement('div');
+            el.id = id;
+            el.style.cssText = 'margin-top:.75rem;padding:.6rem 1rem;border-radius:8px;font-size:.85rem;font-weight:600;';
+        }
+        el.style.background = ok ? 'rgba(52,211,153,0.12)' : 'rgba(244,63,94,0.12)';
+        el.style.color = ok ? '#34d399' : '#f43f5e';
+        el.textContent = msg;
+        return el;
+    }
+
+    // REGISTER
+    document.querySelector('#form-register .form-submit').addEventListener('click', async () => {
+        const inputs = document.querySelectorAll('#form-register input');
+        const [name, email, password] = [...inputs].map(i => i.value);
+        const btn = document.querySelector('#form-register .form-submit');
+        btn.textContent = 'Yuklanmoqda...'; btn.disabled = true;
+
+        try {
+            const res = await fetch('api/register.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, email, password })
+            });
+            const data = await res.json();
+            const msgEl = showMsg('reg-msg', data.message, data.success);
+            btn.parentNode.insertBefore(msgEl, btn);
+
+            if (data.success) {
+                localStorage.setItem('pixly_user', JSON.stringify(data.user));
+                setTimeout(() => window.location.href = 'dashboard.html', 1000);
+            }
+        } catch {
+            const msgEl = showMsg('reg-msg', 'Server bilan bog\'lanishda xatolik', false);
+            btn.parentNode.insertBefore(msgEl, btn);
+        }
+        btn.textContent = 'Ro\'yxatdan o\'tish'; btn.disabled = false;
+    });
+
+    // LOGIN
+    document.querySelector('#form-login .form-submit').addEventListener('click', async () => {
+        const inputs = document.querySelectorAll('#form-login input');
+        const [email, password] = [...inputs].map(i => i.value);
+        const btn = document.querySelector('#form-login .form-submit');
+        btn.textContent = 'Yuklanmoqda...'; btn.disabled = true;
+
+        try {
+            const res = await fetch('api/login.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password })
+            });
+            const data = await res.json();
+            const msgEl = showMsg('log-msg', data.message, data.success);
+            btn.parentNode.insertBefore(msgEl, btn);
+
+            if (data.success) {
+                localStorage.setItem('pixly_user', JSON.stringify(data.user));
+                setTimeout(() => window.location.href = 'dashboard.html', 1000);
+            }
+        } catch {
+            const msgEl = showMsg('log-msg', 'Server bilan bog\'lanishda xatolik', false);
+            btn.parentNode.insertBefore(msgEl, btn);
+        }
+        btn.textContent = 'Kirish'; btn.disabled = false;
+    });
+</script>
+</body>
+</html>

@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <title>{{.Bot.BotName}} - Bot Detail</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #080e1c;
+            color: #e2e8f0;
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            position: fixed;
+            left: 0; top: 0; bottom: 0;
+            width: 240px;
+            background: #0d1526;
+            border-right: 1px solid #1e2d47;
+            display: flex;
+            flex-direction: column;
+            padding: 24px 0;
+            z-index: 100;
+        }
+
+        .sidebar-logo {
+            padding: 0 24px 28px;
+            border-bottom: 1px solid #1e2d47;
+            font-size: 18px;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            color: #fff;
+        }
+        .sidebar-logo span { color: #3b82f6; }
+
+        .sidebar-nav {
+            padding: 20px 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            border-radius: 10px;
+            color: #64748b;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        .nav-item:hover { background: #1e2d47; color: #cbd5e1; }
+        .nav-item.active { background: #1d3461; color: #60a5fa; }
+        .nav-item .icon { font-size: 16px; width: 20px; text-align: center; }
+
+        .main {
+            margin-left: 240px;
+            padding: 32px;
+            min-height: 100vh;
+        }
+
+        .breadcrumb {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            color: #475569;
+            margin-bottom: 24px;
+        }
+        .breadcrumb a { color: #3b82f6; text-decoration: none; }
+        .breadcrumb a:hover { text-decoration: underline; }
+        .breadcrumb .sep { color: #334155; }
+
+        .card {
+            background: linear-gradient(145deg, #111827, #0f1a2e);
+            border: 1px solid #1e2d47;
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, #3b82f620, transparent);
+        }
+
+        .card-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: #f1f5f9;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* BOT HEADER */
+        .bot-header {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .bot-avatar {
+            width: 60px;
+            height: 60px;
+            border-radius: 16px;
+            background: linear-gradient(135deg, #1d4ed8, #7c3aed);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            flex-shrink: 0;
+            box-shadow: 0 8px 24px #3b82f630;
+        }
+
+        .bot-name-wrap { flex: 1; }
+
+        .bot-name {
+            font-size: 22px;
+            font-weight: 800;
+            color: #fff;
+            letter-spacing: -0.5px;
+        }
+
+        .bot-username {
+            color: #3b82f6;
+            font-size: 14px;
+            font-weight: 500;
+            margin-top: 3px;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+        }
+
+        .status-badge.active {
+            background: #052e1620;
+            color: #22c55e;
+            border: 1px solid #22c55e30;
+        }
+
+        .status-badge.active::before {
+            content: '';
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #22c55e;
+            animation: pulse 2s infinite;
+        }
+
+        .status-badge.inactive {
+            background: #1f0a0a30;
+            color: #ef4444;
+            border: 1px solid #ef444430;
+        }
+
+        .status-badge.inactive::before {
+            content: '';
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #ef4444;
+        }
+
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 0 0 0 #22c55e60; }
+            50% { box-shadow: 0 0 0 5px #22c55e00; }
+        }
+
+        /* INFO GRID */
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 12px;
+        }
+
+        .info-item {
+            background: #080e1c;
+            border: 1px solid #1e2d47;
+            border-radius: 12px;
+            padding: 14px 16px;
+            transition: border-color 0.2s, transform 0.2s;
+        }
+        .info-item:hover { border-color: #3b82f640; transform: translateY(-1px); }
+
+        .info-label {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            color: #475569;
+            margin-bottom: 6px;
+        }
+
+        .info-value {
+            font-size: 15px;
+            font-weight: 600;
+            color: #e2e8f0;
+        }
+
+        /* STATS */
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: #080e1c;
+            border: 1px solid #1e2d47;
+            border-radius: 12px;
+            padding: 18px;
+            text-align: center;
+        }
+
+        .stat-num {
+            font-size: 30px;
+            font-weight: 800;
+            line-height: 1;
+        }
+        .stat-num.blue { color: #3b82f6; }
+        .stat-num.green { color: #22c55e; }
+        .stat-num.purple { color: #a855f7; }
+
+        .stat-label {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            color: #475569;
+            margin-top: 6px;
+        }
+
+        /* TOKEN */
+        .token-box {
+            background: #080e1c;
+            border: 1px solid #1e2d47;
+            border-radius: 12px;
+            padding: 16px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            color: #64748b;
+            word-break: break-all;
+            letter-spacing: 0.5px;
+            margin-bottom: 16px;
+        }
+
+        /* BUTTONS */
+        .btn-group { display: flex; flex-wrap: wrap; gap: 10px; }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            padding: 10px 18px;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            border: none;
+            transition: all 0.2s;
+            letter-spacing: 0.2px;
+        }
+
+        .btn-primary { background: linear-gradient(135deg,#2563eb,#1d4ed8); color:#fff; box-shadow:0 4px 12px #3b82f630; }
+        .btn-primary:hover { transform:translateY(-1px); box-shadow:0 6px 20px #3b82f640; }
+
+        .btn-danger { background: linear-gradient(135deg,#dc2626,#b91c1c); color:#fff; box-shadow:0 4px 12px #ef444430; }
+        .btn-danger:hover { transform:translateY(-1px); }
+
+        .btn-success { background: linear-gradient(135deg,#16a34a,#15803d); color:#fff; }
+        .btn-success:hover { transform:translateY(-1px); }
+
+        .btn-warning { background: linear-gradient(135deg,#d97706,#b45309); color:#fff; }
+        .btn-warning:hover { transform:translateY(-1px); }
+
+        .btn-ghost { background:#1e2d47; color:#94a3b8; border:1px solid #334155; }
+        .btn-ghost:hover { background:#253347; color:#e2e8f0; transform:translateY(-1px); }
+
+        /* TABLE */
+        .table-wrap {
+            overflow-x: auto;
+            border-radius: 12px;
+            border: 1px solid #1e2d47;
+        }
+
+        table { width: 100%; border-collapse: collapse; }
+
+        thead th {
+            background: #080e1c;
+            padding: 12px 16px;
+            text-align: left;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            color: #475569;
+            border-bottom: 1px solid #1e2d47;
+            white-space: nowrap;
+        }
+
+        tbody tr {
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+        tbody tr:hover { background: #0f1a2e; }
+
+        tbody td {
+            padding: 13px 16px;
+            border-bottom: 1px solid #0f172a;
+            font-size: 13px;
+            color: #cbd5e1;
+            vertical-align: middle;
+        }
+        tbody tr:last-child td { border-bottom: none; }
+
+        .user-cell {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .user-mini-avatar {
+            width: 34px;
+            height: 34px;
+            border-radius: 9px;
+            background: linear-gradient(135deg, #1d4ed8, #7c3aed);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: 700;
+            color: #fff;
+            flex-shrink: 0;
+        }
+
+        .user-full-name {
+            font-weight: 600;
+            color: #e2e8f0;
+            font-size: 13px;
+        }
+
+        .user-username-small {
+            color: #3b82f6;
+            font-size: 12px;
+            margin-top: 1px;
+        }
+
+        .tg-id-badge {
+            font-family: monospace;
+            background: #1e2d47;
+            color: #64748b;
+            padding: 3px 8px;
+            border-radius: 6px;
+            font-size: 12px;
+        }
+
+        .view-link {
+            color: #3b82f6;
+            text-decoration: none;
+            font-size: 12px;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 5px 12px;
+            border-radius: 7px;
+            background: #1d3461;
+            border: 1px solid #2563eb30;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        .view-link:hover { background: #2563eb; color: #fff; transform: translateY(-1px); }
+
+        .row-id { font-size: 12px; color: #475569; font-weight: 600; }
+
+        /* TOAST */
+        #toast {
+            position: fixed;
+            bottom: 28px; right: 28px;
+            background: #1e2d47;
+            border: 1px solid #334155;
+            color: #e2e8f0;
+            padding: 12px 20px;
+            border-radius: 12px;
+            font-size: 13px;
+            font-weight: 500;
+            z-index: 9999;
+            opacity: 0;
+            transform: translateY(10px);
+            transition: all 0.3s;
+            pointer-events: none;
+        }
+        #toast.show { opacity:1; transform:translateY(0); }
+
+        /* MODAL */
+        #modal {
+            display: none;
+            position: fixed; inset: 0;
+            background: #00000085;
+            z-index: 9999;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-inner {
+            background: #111827;
+            border: 1px solid #1e2d47;
+            border-radius: 16px;
+            padding: 28px;
+            max-width: 380px;
+            width: 90%;
+        }
+        .modal-title { font-size:16px; font-weight:700; color:#fff; margin-bottom:8px; }
+        .modal-msg { font-size:13px; color:#64748b; margin-bottom:24px; }
+    </style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+    <div class="sidebar-logo">Admin<span>Panel</span></div>
+    <nav class="sidebar-nav">
+        <a href="/admin" class="nav-item"><span class="icon">📊</span> Dashboard</a>
+        <a href="/admin/bots" class="nav-item active"><span class="icon">🤖</span> Botlar</a>
+        <a href="/admin/users" class="nav-item"><span class="icon">👥</span> Foydalanuvchilar</a>
+        <a href="/admin/settings" class="nav-item"><span class="icon">⚙️</span> Sozlamalar</a>
+    </nav>
+</aside>
+
+<!-- MAIN -->
+<main class="main">
+
+    {{if .Bot}}
+        <!-- ================================================================= -->
+        <!-- 🤖 1-KO'RINISH: BITTA BOTNING TAFSILOTLARI VA BOSHQARUVI           -->
+        <!-- ================================================================= -->
+
+        <!-- BREADCRUMB -->
+        <div class="breadcrumb">
+            <a href="/admin">Dashboard</a>
+            <span class="sep">›</span>
+            <a href="/admin/bots">Botlar</a>
+            <span class="sep">›</span>
+            <span>{{.Bot.BotName}}</span>
+        </div>
+
+        <!-- BOT INFO -->
+        <div class="card">
+            <div class="bot-header">
+                <div class="bot-avatar">🤖</div>
+                <div class="bot-name-wrap">
+                    <div class="bot-name">{{.Bot.BotName}}</div>
+                    <div class="bot-username">@{{.Bot.BotUsername}}</div>
+                </div>
+                {{if .Bot.IsActive}}
+                    <div class="status-badge active">ACTIVE</div>
+                {{else}}
+                    <div class="status-badge inactive">OFF</div>
+                {{end}}
+            </div>
+
+            <div class="info-grid">
+                <div class="info-item">
+                    <div class="info-label">Bot ID</div>
+                    <div class="info-value">#{{.Bot.Id}}</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Owner (UserBot)</div>
+                    <div class="info-value">@{{.Bot.Owner.Username}}</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Owner Telegram ID</div>
+                    <div class="info-value" style="font-family:monospace;color:#3b82f6">{{.Bot.Owner.TgId}}</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Bot Turi</div>
+                    <div class="info-value">{{.Bot.BotType.Name}}</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Bot Type Kodi</div>
+                    <div class="info-value" style="font-family:monospace;color:#a855f7">{{.Bot.BotType.Code}}</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Foydalanuvchilar</div>
+                    <div class="info-value" style="color:#3b82f6">{{.Bot.UserCount}}</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Yaratilgan</div>
+                    <div class="info-value">{{.Bot.CreatedAt.Format "02 Jan 2006"}}</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Yangilangan</div>
+                    <div class="info-value">{{.Bot.UpdatedAt.Format "02 Jan 2006 15:04"}}</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- STATS -->
+        <div class="stats-row">
+            <div class="stat-card">
+                <div class="stat-num blue">{{.Bot.UserCount}}</div>
+                <div class="stat-label">Jami BotUser</div>
+            </div>
+            <div class="stat-card">
+                {{if .Bot.IsActive}}
+                    <div class="stat-num green">ON</div>
+                {{else}}
+                    <div class="stat-num" style="color:#ef4444">OFF</div>
+                {{end}}
+                <div class="stat-label">Status</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-num purple" style="font-size:18px;padding-top:6px">{{.Bot.BotType.Name}}</div>
+                <div class="stat-label">Bot Turi</div>
+            </div>
+        </div>
+
+        <!-- TOKEN -->
+        <div class="card">
+            <div class="card-title">🔐 Bot Token
+                <span style="margin-left:auto;font-size:11px;color:#475569;font-weight:500">CreatedBot.Token</span>
+            </div>
+            <div class="token-box" id="tokenBox">
+                {{ if .Bot.Token }}
+                    <span id="tokenMask">{{slice .Bot.Token 0 10}}:•••••••••••••••••••••••••••••••••••</span>
+                {{ else }}
+                    <span id="tokenMask">No token configured</span>
+                {{ end }}
+                <span id="tokenFull" style="display:none">{{.Bot.Token}}</span>
+            </div>
+            <div class="btn-group">
+                <button class="btn btn-ghost" onclick="toggleToken(this)">👁 Ko'rish</button>
+                <button class="btn btn-ghost" onclick="copyToken('{{.Bot.Token}}')">📋 Nusxalash</button>
+                <a href="/admin/bots/{{.Bot.Id}}/regenerate-token" class="btn btn-warning"
+                   onclick="return confirm('Tokenni yangilash? Eski token ishlamay qoladi!')">🔄 Yangilash</a>
+            </div>
+        </div>
+
+        <!-- 📝 TAHRIRLASH FORMASI (Faqat Tahrirlash tugmasi bosilganda chiqadi) -->
+        {{ if .IsEditing }}
+            <div class="card" style="border: 1px solid #3b82f6; background: #111827; margin-top: 20px;">
+                <div class="card-title" style="color: #1e3a8a; border-bottom: 1px solid #111827; padding-bottom: 10px;">
+                    📝 Bot Ma'lumotlarini Tahrirlash
+                </div>
+
+                <form action="/admin/bots/{{.Bot.Id}}/edit" method="POST" style="margin-top: 15px;">
+                    <div class="info-grid" style="grid-template-columns: 1fr; gap: 16px;">
+
+                        <div class="info-item" style="display: flex; flex-direction: column; align-items: flex-start; gap: 5px;">
+                            <div class="info-label" style="font-weight: 600;">Bot Nomi</div>
+                            <input type="text" name="bot_name" value="{{.Bot.BotName}}" required
+                                   style="width: 100%; padding: 10px; border: 1px solid #111827; border-radius: 6px; font-size: 14px;">
+                        </div>
+
+                        <div class="info-item" style="display: flex; flex-direction: column; align-items: flex-start; gap: 5px;">
+                            <div class="info-label" style="font-weight: 600;">Bot Username (Maks: @siz)</div>
+                            <input type="text" name="bot_username" value="{{.Bot.BotUsername}}" required
+                                   style="width: 100%; padding: 10px; border: 1px solid #111827; border-radius: 6px; font-size: 14px;">
+                        </div>
+
+                        <div class="info-item" style="display: flex; flex-direction: column; align-items: flex-start; gap: 5px;">
+                            <div class="info-label" style="font-weight: 600;">Bot Token (BotFather taqdim etgan real token)</div>
+                            <input type="text" name="token" value="{{.Bot.Token}}" required
+                                   style="width: 100%; padding: 10px; border: 1px solid #031f40; border-radius: 6px; font-family: monospace; font-size: 14px;">
+                        </div>
+
+                    </div>
+
+                    <div class="btn-group" style="margin-top: 20px; justify-content: flex-end; gap: 10px;">
+                        <a href="/admin/bots/{{.Bot.Id}}" class="btn btn-ghost">❌ Bekor qilish</a>
+                        <button type="submit" class="btn btn-primary" style="background: #111827; color: #111827; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer;">
+                            💾 O'zgarishlarni Saqlash
+                        </button>
+                    </div>
+                </form>
+            </div>
+        {{ end }}
+        <!-- ACTIONS -->
+        <div class="card">
+            <div class="card-title">⚙️ Boshqaruv</div>
+            <div class="btn-group">
+                {{if .Bot.IsActive}}
+                    <a href="/admin/bots/{{.Bot.Id}}/toggle" class="btn btn-warning"
+                       onclick="return confirm('Botni o\'chirasizmi?')">⏸ Botni o'chirish</a>
+                {{else}}
+                    <a href="/admin/bots/{{.Bot.Id}}/toggle" class="btn btn-success">▶️ Botni yoqish</a>
+                {{end}}
+
+                <a href="/admin/bots/{{.Bot.Id}}/edit" class="btn btn-primary">✏️ Tahrirlash</a>
+
+                <a href="/admin/bots/{{.Bot.Id}}/delete" class="btn btn-danger"
+                   onclick="return confirm('DIQQAT! Bot va barcha BotUser\'lar o\'chib ketadi!')">🗑 O'chirish</a>
+
+                <a href="/admin/bots" class="btn btn-ghost">← Orqaga</a>
+            </div>
+        </div>
+
+        <!-- BOT USERS -->
+        <div class="card">
+            <div class="card-title">
+                👥 Bot Foydalanuvchilari (BotUser)
+                <span style="margin-left:auto;font-size:12px;color:#475569;font-weight:500">
+                {{.Bot.UserCount}} ta
+            </span>
+            </div>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Foydalanuvchi</th>
+                        <th>TgId</th>
+                        <th>Qo'shilgan (JoinedAt)</th>
+                        <th>Amal</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {{range .Users}}
+                        <tr onclick="window.location='/admin/bot-users/{{.Id}}'">
+                            <td class="row-id">{{.Id}}</td>
+                            <td>
+                                <div class="user-cell">
+                                    <!-- Xavfsiz tekshiruv: ism bo'sh bo'lsa slice xato bermaydi -->
+                                    <div class="user-mini-avatar">
+                                        {{if .FirstName}}{{slice .FirstName 0 1}}{{else}}👤{{end}}
+                                    </div>
+                                    <div>
+                                        <div class="user-full-name">{{.FirstName}} {{.LastName}}</div>
+                                        <div class="user-username-small">@{{.Username}}</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td><span class="tg-id-badge">{{.TgId}}</span></td>
+                            <td>{{.JoinedAt.Format "02 Jan 2006, 15:04"}}</td>
+                            <td>
+                                <a href="/admin/bot-users/{{.Id}}"
+                                   class="view-link"
+                                   onclick="event.stopPropagation()">Ko'rish →</a>
+                            </td>
+                        </tr>
+                    {{else}}
+                        <tr>
+                            <td colspan="5" style="text-align:center;color:#475569;padding:28px">
+                                Hali foydalanuvchi yo'q
+                            </td>
+                        </tr>
+                    {{end}}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    {{else}}
+        <!-- ================================================================= -->
+        <!-- 📊 2-KO'RINISH: ASOSIY ADMIN DASHBOARD (REAL STATISTIKA)          -->
+        <!-- ================================================================= -->
+
+        <!-- BREADCRUMB -->
+        <div class="breadcrumb">
+            <span>Dashboard</span>
+            <span class="sep">›</span>
+            <span>Asosiy statistika</span>
+        </div>
+
+        <!-- STATS ROW 1 -->
+        <div class="stats-row">
+            <div class="stat-card">
+                <div class="stat-num blue">{{.BotCount}}</div>
+                <div class="stat-label">Jami Botlar</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-num green">{{.ActiveBotCount}}</div>
+                <div class="stat-label">Faol Botlar</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-num" style="color:#ef4444">{{.InactiveBotCount}}</div>
+                <div class="stat-label">O'chirilgan Botlar</div>
+            </div>
+        </div>
+
+        <!-- STATS ROW 2 -->
+        <div class="stats-row" style="margin-top: 20px;">
+            <div class="stat-card">
+                <div class="stat-num blue">{{.UserCount}}</div>
+                <div class="stat-label">Jami Adminlar (Bot Egalari)</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-num purple">{{.BotUserCount}}</div>
+                <div class="stat-label">Jami Bot A'zolari (BotUser)</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-num purple" style="font-size:24px;padding-top:4px">{{.BotTypeCount}}</div>
+                <div class="stat-label">Bot Turlari</div>
+            </div>
+        </div>
+
+        <!-- LATEST BOTS TABLE -->
+        <div class="card" style="margin-top: 20px;">
+            <div class="card-title">
+                🤖 Oxirgi Yaratilgan Botlar (Tizimdagi real ma'lumotlar)
+            </div>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Bot Nomi</th>
+                        <th>Username</th>
+                        <th>Bot Turi</th>
+                        <th>Egasi (Owner)</th>
+                        <th>Holati</th>
+                        <th>Amal</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {{range .LatestBots}}
+                        <tr onclick="window.location='/admin/bots/{{.Id}}'">
+                            <td class="row-id">{{.Id}}</td>
+                            <td><strong>{{.BotName}}</strong></td>
+                            <td><span style="color:#3b82f6">@{{.BotUsername}}</span></td>
+                            <td><span class="tg-id-badge" style="background:#111827;color:#07ed00">{{.BotType.Name}}</span></td>
+                            <td>@{{.Owner.Username}}</td>
+                            <td>
+                                {{if .IsActive}}
+                                    <span class="status-badge active" style="padding:2px 8px; font-size:11px;">ACTIVE</span>
+                                {{else}}
+                                    <span class="status-badge inactive" style="padding:2px 8px; font-size:11px;">OFF</span>
+                                {{end}}
+                            </td>
+                            <td>
+                                <a href="/admin/bots/{{.Id}}" class="view-link">Boshqarish →</a>
+                            </td>
+                        </tr>
+                    {{else}}
+                        <tr>
+                            <td colspan="7" style="text-align:center;color:#475569;padding:28px">
+                                Hali tizimda birorta ham bot yaratilmagan.
+                            </td>
+                        </tr>
+                    {{end}}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    {{end}}
+
+</main>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<!-- MODAL -->
+<div id="modal">
+    <div class="modal-inner">
+        <div class="modal-title" id="modal-title"></div>
+        <div class="modal-msg" id="modal-msg"></div>
+        <div style="display:flex;gap:10px;justify-content:flex-end">
+            <button class="btn btn-ghost" onclick="closeModal()">Bekor</button>
+            <button class="btn btn-danger" id="modal-confirm">Tasdiqlash</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    function toggleToken(btn) {
+        const mask = document.getElementById('tokenMask');
+        const full = document.getElementById('tokenFull');
+        if (full.style.display === 'none') {
+            mask.style.display = 'none';
+            full.style.display = 'inline';
+            btn.textContent = '🙈 Yashirish';
+        } else {
+            mask.style.display = 'inline';
+            full.style.display = 'none';
+            btn.textContent = '👁 Ko\'rish';
+        }
+    }
+
+    function copyToken(token) {
+        navigator.clipboard.writeText(token).then(() => {
+            showToast('📋 Token nusxalandi!');
+        });
+    }
+
+    function showToast(msg) {
+        const t = document.getElementById('toast');
+        t.textContent = msg;
+        t.classList.add('show');
+        setTimeout(() => t.classList.remove('show'), 2800);
+    }
+
+    function closeModal() {
+        document.getElementById('modal').style.display = 'none';
+    }
+</script>
+
+</body>
+</html>

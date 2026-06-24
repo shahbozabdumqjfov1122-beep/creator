@@ -41,4 +41,5 @@ func init() {
 
 	beego.InsertFilter("/admin/*", beego.BeforeRouter, controllers.AdminAuthFilter)
 	beego.InsertFilter("/", beego.BeforeRouter, controllers.AdminAuthFilter)
+
 }

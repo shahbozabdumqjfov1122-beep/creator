@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/beego/beego/v2/client/orm"
 	beego "github.com/beego/beego/v2/server/web"
+	_ "github.com/lib/pq"
 )
 
 func InitDB() {
@@ -14,14 +15,15 @@ func InitDB() {
 	user := beego.AppConfig.DefaultString("db_user", "admin")
 	pass := beego.AppConfig.DefaultString("db_pass", "admin")
 
+	// ESKI QATORNI O'CHIRIB, MANA BUNI QO'YING:
 	dsn := fmt.Sprintf(
-		"host=%s port=%s dbname=%s user=%s password=%s sslmode=disable",
+		"host='%s' port='%s' dbname='%s' user='%s' password='%s' sslmode='disable'",
 		host, port, name, user, pass,
 	)
 
 	orm.RegisterDriver("postgres", orm.DRPostgres)
 	orm.RegisterDataBase("default", "postgres", dsn)
-	orm.RunSyncdb("default", false, true) // Birinchi argument FALSE bo'lishi shart!
+	orm.RunSyncdb("default", false, true)
 }
 
 func SeedBotTypes() {

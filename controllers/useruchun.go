@@ -139,7 +139,7 @@ func HandleUserBotCallbackQuery(bot *tgbotapi.BotAPI, b *models.CreatedBot, cb *
 	case strings.HasPrefix(data, "anime_page:") || strings.HasPrefix(data, "anime_part:"):
 		HandleAnimeCallback(bot, cb)
 		return
-		// 🎬 KINO bilan bog'liq barcha callbacklar shu yerga yo'naltiriladi
+
 	case strings.HasPrefix(data, "kino_page:") ||
 		strings.HasPrefix(data, "kino_part:") ||
 		strings.HasPrefix(data, "kino_edit_code:") ||
@@ -191,9 +191,6 @@ func HandleUserBotCallbackQuery(bot *tgbotapi.BotAPI, b *models.CreatedBot, cb *
 		sendUserBot(bot, chatID, "🖼 5. Yangi rasmni yuboring:")
 		return
 
-	case data == "anime_settings":
-		return
-
 	case strings.HasPrefix(data, "del_chan_"):
 		idStr := strings.TrimPrefix(data, "del_chan_")
 		chanRecID, err := strconv.ParseInt(idStr, 10, 64)
@@ -223,6 +220,20 @@ func HandleUserBotCallbackQuery(bot *tgbotapi.BotAPI, b *models.CreatedBot, cb *
 
 		log.Printf("🗑️ Kanal o'chirildi (IsActive=false): RecID: %d, ChannelID: %d, Bot ID: %d", channel.Id, channel.ChannelID, b.Id)
 		sendUserBot(bot, chatID, fmt.Sprintf("✅ Kanal (ID: %d) majburiy obuna ro'yxatidan olib tashlandi.", channel.ChannelID))
+		return
+
+	case data == "users_all":
+		showUserList(bot, chatID, b.Id, false, false)
+		return
+
+	case data == "IsVip":
+		// VIP ro'yxatni chiqarish
+		showUserList(bot, chatID, b.Id, true, false)
+		return
+
+	case data == "IsBlocked":
+		// Bloklanganlar ro'yxatini chiqarish
+		showUserList(bot, chatID, b.Id, false, true)
 		return
 
 	default:

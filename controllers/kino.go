@@ -210,7 +210,7 @@ func HandleKinoBotMessage(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgbot
 
 		default:
 			if strings.HasPrefix(msg.Text, "/") {
-				sendUserBot(bot, chatID, "❌ Noto‘g‘ri buyruq.")
+				sendUserBot(bot, chatID, "/admin")
 				return
 			}
 			handleKinoByCode(bot, b, msg, msg.Text)
@@ -236,7 +236,7 @@ func HandleKinoBotMessage(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgbot
 
 	default:
 		if strings.HasPrefix(msg.Text, "/") {
-			sendUserBot(bot, chatID, "❌ Noto‘g‘ri buyruq.")
+			sendUserBot(bot, chatID, "/admin")
 			return
 		}
 		handleKinoByCode(bot, b, msg, msg.Text)

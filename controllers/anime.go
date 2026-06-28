@@ -12,6 +12,16 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
+type KeyboardButton struct {
+	Text              string `json:"text"`
+	Style             string `json:"style,omitempty"`
+	IconCustomEmojiID string `json:"icon_custom_emoji_id,omitempty"`
+}
+
+type ReplyKeyboardMarkup struct {
+	Keyboard [][]KeyboardButton `json:"keyboard"`
+}
+
 func HandleAnimeBotMessage(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgbotapi.Message) {
 	userID := msg.From.ID
 	chatID := msg.Chat.ID
@@ -41,6 +51,8 @@ func HandleAnimeBotMessage(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgbo
 			msg.Text == "➕ Admin qo'shish" ||
 			msg.Text == "➖ Admin o'chirish" ||
 			msg.Text == "📋 Adminlar ro'yxati" ||
+			msg.Text == "📋 Blok ro'yxati" ||
+			msg.Text == "📋 VIP ro'yxati" ||
 			msg.Text == "⬅️ Orqaga" ||
 			msg.Text == "/delanime" ||
 			msg.Text == "/editanime"
@@ -210,7 +222,7 @@ func HandleAnimeBotMessage(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgbo
 
 		default:
 			if strings.HasPrefix(msg.Text, "/") {
-				sendUserBot(bot, chatID, "❌ Noto‘g‘ri buyruq.")
+				sendUserBot(bot, chatID, "/admin")
 				return
 			}
 			handleAnimeByCode(bot, b, msg, msg.Text)
@@ -236,7 +248,7 @@ func HandleAnimeBotMessage(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgbo
 
 	default:
 		if strings.HasPrefix(msg.Text, "/") {
-			sendUserBot(bot, chatID, "❌ Noto‘g‘ri buyruq.")
+			sendUserBot(bot, chatID, "/admin")
 			return
 		}
 		// Anime kodi orqali qidirish
@@ -941,6 +953,7 @@ func RouteAnimeEditState(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgbota
 func showUserList(bot *tgbotapi.BotAPI, chatID int64, botID int64, vipOnly bool, blockedOnly bool) {
 	o := orm.NewOrm()
 
+	// BotUser modeliga to'g'ri so'rov yuborish
 	qs := o.QueryTable(new(models.BotUser)).Filter("Bot__Id", botID)
 
 	if vipOnly {
@@ -952,23 +965,51 @@ func showUserList(bot *tgbotapi.BotAPI, chatID int64, botID int64, vipOnly bool,
 
 	var users []models.BotUser
 	_, err := qs.All(&users)
-	if err != nil || len(users) == 0 {
-		bot.Send(tgbotapi.NewMessage(chatID, "📭 Ro'yxat bo'sh."))
+
+	// Agar xatolik bo'lsa yoki baza chindan ham bo'sh bo'lsa
+	if err != nil {
+		log.Printf("showUserList xatolik: %v", err)
+		sendUserBot(bot, chatID, "❌ Ro'yxatni yuklashda texnik xatolik yuz berdi.")
 		return
 	}
 
-	text := "📋 *Ro'yxat:*\n\n"
+	if len(users) == 0 {
+		sendUserBot(bot, chatID, "📭 Ro'yxat hozircha bo'sh.")
+		return
+	}
+
+	// Sarlavha qismini chiroyli qilamiz
+	title := "📋 *Foydalanuvchilar ro'yxati:*"
+	if vipOnly {
+		title = "⭐ *VIP foydalanuvchilar ro'yxati:*"
+	} else if blockedOnly {
+		title = "🚫 *Bloklanganlar ro'yxati:*"
+	}
+
+	text := title + "\n\n"
 	for i, u := range users {
 		uname := u.Username
 		if uname == "" {
 			uname = "noma'lum"
+		} else {
+			// Markdown buzilib ketmasligi uchun username ichidagi '_' belgisini qochiramiz (escape)
+			uname = strings.ReplaceAll(uname, "_", "\\_")
 		}
+
 		text += fmt.Sprintf("%d. ID: `%d` — @%s\n", i+1, u.TgId, uname)
 	}
 
+	// Xabarni yuborish
 	msg := tgbotapi.NewMessage(chatID, text)
 	msg.ParseMode = "Markdown"
-	bot.Send(msg)
+
+	_, sendErr := bot.Send(msg)
+	if sendErr != nil {
+		log.Printf("Ro'yxatni yuborishda Telegram xatoligi (ehtimol Markdown parse error): %v", sendErr)
+		// Agar Markdown sababli o'xshamaslik ehtimoli bo'lsa, oddiy matn sifatida qayta urinamiz
+		msg.ParseMode = ""
+		bot.Send(msg)
+	}
 }
 
 func startVipAdd(bot *tgbotapi.BotAPI, chatID int64, userID int64) {
@@ -1274,7 +1315,7 @@ func showStatistics(bot *tgbotapi.BotAPI, b *models.CreatedBot, chatID int64) {
 
 	text := fmt.Sprintf(
 		"📊 *Bot Statistikasi*\n\n"+
-			"🎬 Jami anime: `%d`\n"+
+			"🎬 Jami anime/kino: `%d`\n"+
 			"👥 Jami user: `%d`\n"+
 			"⭐ VIP user: `%d`\n"+
 			"⛔ Ban user: `%d`\n\n"+

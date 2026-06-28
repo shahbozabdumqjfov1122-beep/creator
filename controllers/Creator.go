@@ -111,7 +111,7 @@ func sendWelcome(chatID int64) {
 				{Text: "Balansni to'ldirish", CallbackData: "top_up_balance", Style: "primary", IconCustomEmojiID: "5472098698030781431"},
 				{Text: "Mening balansim", CallbackData: "my_balance", Style: "primary", IconCustomEmojiID: "5469891368308482853"}},
 			{
-				{Text: "WEB PANELGA O'TISH", URL: "https://your-link.com", Style: "primary", IconCustomEmojiID: "5470101946260037454"}}},
+				{Text: "WEB PANELGA O'TISH", URL: "http://67.211.211.44:8080", Style: "primary", IconCustomEmojiID: "5470101946260037454"}}},
 	}
 
 	fromChatID := int64(-1003705222257)
@@ -192,7 +192,7 @@ func sendMainMenu(chatID int64) {
 				{Text: "Balansni to'ldirish", CallbackData: "top_up_balance", Style: "primary", IconCustomEmojiID: "5472098698030781431"},
 				{Text: "Mening balansim", CallbackData: "my_balance", Style: "primary", IconCustomEmojiID: "5469891368308482853"}},
 			{
-				{Text: "WEB PANELGA O'TISH", URL: "https://your-link.com", Style: "primary", IconCustomEmojiID: "5470101946260037454"}}},
+				{Text: "WEB PANELGA O'TISH", URL: "http://67.211.211.44:8080", Style: "primary", IconCustomEmojiID: "5470101946260037454"}}},
 	}
 
 	fromChatID := int64(-1003705222257)
@@ -531,14 +531,7 @@ func sendMyBots(chatID int64, userTgID int64) {
 		return
 	}
 
-	activeBotCount := 0
-	for _, b := range bots {
-		if b.IsActive && !b.IsSuspended {
-			activeBotCount++
-		}
-	}
-
-	header := fmt.Sprintf("Sizning botlaringiz ( %d ta):\n\nUmumiy balans:  %.0f so'm\n", len(bots), owner.Balance)
+	header := fmt.Sprintf("Sizning botlaringiz (%d ta):\n\nUmumiy balans: %.0f so'm\n", len(bots), owner.Balance)
 	send(chatID, header, nil)
 
 	for i, b := range bots {
@@ -552,77 +545,55 @@ func sendMyBots(chatID int64, userTgID int64) {
 		blockedCount, _ := o.QueryTable("bot_user").Filter("Bot__Id", b.Id).Filter("IsBlocked", true).Count()
 
 		var statusLine string
+		now := time.Now()
+
 		switch {
 		case !b.IsActive:
-			statusLine = "O'chirilgan (qo'lda to'xtatilgan)"
+			statusLine = "🛑 O'chirilgan (qo'lda to'xtatilgan)"
 		case b.IsSuspended:
-			statusLine = "To'xtatilgan (balans yetarli emas)"
+			statusLine = "⚠️ To'xtatilgan (balans yetarli emas)"
+		case b.PaidUntil.Before(now):
+			statusLine = "⏰ Muddat tugagan (to'xtatilishi kerak)"
+		case !services.IsBotRunning(b.Id):
+			statusLine = "🔴 Process ishlamayapti (qayta urinib ko'ring)"
 		default:
-			if activeBotCount > 0 && owner.Balance > 0 {
-				daysLeft := owner.Balance / (DailyPriceDisplay * float64(activeBotCount))
+			// Ishlayotgan bot uchun qolgan vaqt
+			if owner.Balance > 0 {
+				daysLeft := owner.Balance / (DailyPriceDisplay * float64(len(bots))) // oddiy hisob
 				if daysLeft >= 1 {
-					statusLine = fmt.Sprintf("Ishlamoqda — taxminan %.0f kun balans yetadi", daysLeft)
+					statusLine = fmt.Sprintf("✅ Ishlamoqda — taxminan %.0f kun", daysLeft)
 				} else {
-					hoursLeft := daysLeft * 24
-					statusLine = fmt.Sprintf("Ishlamoqda — taxminan %.0f soat balans yetadi", hoursLeft)
+					hoursLeft := int(daysLeft * 24)
+					statusLine = fmt.Sprintf("✅ Ishlamoqda — taxminan %d soat", hoursLeft)
 				}
 			} else {
-				statusLine = " Ishlamoqda"
+				statusLine = "✅ Ishlamoqda"
 			}
 		}
 
 		text := fmt.Sprintf(
-			"%d. @%s\n   Turi: %s\n   %s\n   Jami: %d |  VIP: %d |  Blok: %d",
+			"%d. @%s\n   Turi: %s\n   %s\n   Jami: %d | VIP: %d | Blok: %d",
 			i+1, b.BotUsername, botTypeName, statusLine, totalCount, vipCount, blockedCount,
 		)
 
 		var keyboard RangliKlaviatura
 
 		if !b.IsActive {
-			// Bot to'xtatilgan bo'lsa — qayta yoqish (Yashil) va butunlay o'chirish (Qizil)
 			keyboard = RangliKlaviatura{
 				InlineKeyboard: [][]RangliTugma{
-					{
-						{
-							Text:              "Qayta yoqish",
-							CallbackData:      fmt.Sprintf("activate_bot:%d", b.Id),
-							Style:             "success", // Yashil rang
-							IconCustomEmojiID: "5472371840770938927",
-						},
-					},
-					{
-						{
-							Text:              "Butunlay o'chirish",
-							CallbackData:      fmt.Sprintf("hard_delete_bot:%d", b.Id),
-							Style:             "danger", // Qizil rang
-							IconCustomEmojiID: "5470135764832524129",
-						},
-					},
+					{{Text: "Qayta yoqish", CallbackData: fmt.Sprintf("activate_bot:%d", b.Id), Style: "success", IconCustomEmojiID: "5472371840770938927"}},
+					{{Text: "Butunlay o'chirish", CallbackData: fmt.Sprintf("hard_delete_bot:%d", b.Id), Style: "danger", IconCustomEmojiID: "5470135764832524129"}},
 				},
 			}
 		} else {
-			// Bot faol bo'lsa — O'chirish menyusi (Qizil) va Tokenni o'zgartirish (Ko'k)
 			keyboard = RangliKlaviatura{
 				InlineKeyboard: [][]RangliTugma{
-					{
-						{
-							Text:         "O'chirish",
-							CallbackData: fmt.Sprintf("delete_bot:%d", b.Id),
-							Style:        "danger",
-						},
-					},
-					{
-						{
-							Text:         "Tokenni o'zgartirish",
-							CallbackData: fmt.Sprintf("change_token:%d", b.Id),
-							Style:        "primary",
-						},
-					},
+					{{Text: "O'chirish", CallbackData: fmt.Sprintf("delete_bot:%d", b.Id), Style: "danger"}},
+					{{Text: "Tokenni o'zgartirish", CallbackData: fmt.Sprintf("change_token:%d", b.Id), Style: "primary"}},
 				},
 			}
 		}
 
-		// DIQQAT: &keyboard emas, shunchaki keyboard o'zi yuboriladi!
 		send(chatID, text, keyboard)
 	}
 }
@@ -751,7 +722,11 @@ func activateBot(chatID int64, userTgID int64, botID int64) {
 	o := orm.NewOrm()
 
 	var bot models.CreatedBot
-	err := o.QueryTable("created_bot").Filter("Id", botID).RelatedSel("Owner").One(&bot)
+	err := o.QueryTable("created_bot").
+		Filter("Id", botID).
+		RelatedSel("Owner").   // ⬅️ aniq nom bilan
+		RelatedSel("BotType"). // ⬅️ shuni qo'shdik — asosiy tuzatish
+		One(&bot)
 	if err != nil || bot.Owner == nil || bot.Owner.TgId != userTgID {
 		send(chatID, "❌ Bot topilmadi yoki sizga tegishli emas.", nil)
 		return

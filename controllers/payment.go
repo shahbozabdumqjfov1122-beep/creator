@@ -26,7 +26,7 @@ const AdminChatID int64 = 7518992824
 func ProcessTopUpAmount(chatID int64, userID int64, textAmount string) {
 	inputAmount, err := strconv.ParseFloat(textAmount, 64)
 	if err != nil || inputAmount < 1000 {
-		msg := tgbotapi.NewMessage(chatID, "❌ Noto'g'ri summa kiritildi. Iltimos, minimal 1 000 so'm bo'lgan faqat son kiriting:")
+		msg := tgbotapi.NewMessage(chatID, "Iltimos, minimal 1 000 so'm bo'lgan faqat son kiriting:")
 		CreatorBot.Send(msg)
 		return
 	}
@@ -78,7 +78,7 @@ func ProcessTopUpAmount(chatID int64, userID int64, textAmount string) {
 	mu.Unlock()
 
 	responseText := fmt.Sprintf(
-		"💳 Karta raqami: `5440 8103 0202 7619`\n"+
+		"💳 Karta raqami: `9860 0803 8859 7462`\n"+
 			"👤 Karta egasi: A.SH\n\n"+
 			"💰 To'lov summasi: `%.0f` so'm\n"+
 			"➕ Qo'shimcha summa: %d so'm (to'lovni tasdiqlash uchun)\n\n"+
@@ -212,7 +212,11 @@ func HandleAdminApprove(invoiceID int64) {
 	)
 	send(invoice.UserId, successText, nil)
 	sendMarkdown(invoice.UserId, successText)
+	// HandleAdminApprove oxirida, successText yuborilgandan keyin qo'shing:
+	topUpUserBalance(invoice.UserId, invoice.Amount)
 
+	// ... successText yuborilgandan keyin
+	services.ResumeBotsAfterTopUp(invoice.UserId) // ← qo'shimcha chaqiruv
 	send(AdminChatID, fmt.Sprintf("✅ Tasdiqlandi: UserID=%d, Summa=%.0f so'm", invoice.UserId, invoice.Amount), nil)
 
 	log.Printf("✅ To'lov admin tomonidan tasdiqlandi: UserID=%d, Summa=%.0f", invoice.UserId, invoice.Amount)
@@ -289,7 +293,7 @@ func topUpUserBalance(userID int64, amount float64) {
 		log.Printf("Balansni yangilashda xato: %v", updateErr)
 		return
 	}
-
+	o.Update(&user, "Balance")
 	services.ResumeBotsAfterTopUp(userID)
 
 	log.Printf("💰 Balans yangilandi: UserID=%d, +%.0f so'm", userID, amount)

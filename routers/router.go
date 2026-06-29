@@ -39,6 +39,9 @@ func init() {
 	beego.Router("/admin/join-requests", &controllers.AdminController{}, "get:AllJoinRequests")
 	beego.Router("/admin/join-requests/delete/:id", &controllers.AdminController{}, "get:DeleteJoinRequest")
 
+	// Yangi (toggle-block ga moslashtirdik)
+	beego.Router("/admin/bot-users/:id/toggle-block", &controllers.AdminController{}, "get:BlockBotUser") // GET yoki POST
+
 	beego.InsertFilter("/admin/*", beego.BeforeRouter, controllers.AdminAuthFilter)
 	beego.InsertFilter("/", beego.BeforeRouter, controllers.AdminAuthFilter)
 

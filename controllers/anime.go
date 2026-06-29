@@ -12,16 +12,6 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
-type KeyboardButton struct {
-	Text              string `json:"text"`
-	Style             string `json:"style,omitempty"`
-	IconCustomEmojiID string `json:"icon_custom_emoji_id,omitempty"`
-}
-
-type ReplyKeyboardMarkup struct {
-	Keyboard [][]KeyboardButton `json:"keyboard"`
-}
-
 func HandleAnimeBotMessage(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgbotapi.Message) {
 	userID := msg.From.ID
 	chatID := msg.Chat.ID

@@ -128,7 +128,6 @@ func (c *AdminController) Dashboard() {
 	c.TplName = "index.html"
 }
 
-// ==================== LOGOUT ====================
 func (c *AdminController) Logout() {
 	c.DestroySession()
 	c.Redirect("/admin/login", 302)

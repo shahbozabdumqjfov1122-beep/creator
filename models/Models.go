@@ -179,10 +179,18 @@ type Admin struct {
 	CreatedAt time.Time `orm:"auto_now_add;type(datetime)"`
 	UpdatedAt time.Time `orm:"auto_now;type(datetime)"`
 }
+type BotStat struct {
+	Id        int64       `orm:"pk;auto"`
+	Bot       *CreatedBot `orm:"rel(fk)"`
+	UserID    int64
+	Action    string // "download", "success", "fail"
+	CreatedAt time.Time
+}
 
 func init() {
 	orm.RegisterModel(
 		new(UserBot),
+		new(BotStat),
 		new(BotType),
 		new(CreatedBot),
 		new(BotUser),

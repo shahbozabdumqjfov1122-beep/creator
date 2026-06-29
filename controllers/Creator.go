@@ -32,6 +32,7 @@ var mu sync.RWMutex
 var userState = make(map[int64]string)
 var userBotType = make(map[int64]string)
 var userTokenChangeBotID = make(map[int64]int64)
+
 var HardcodedBotTypes = []struct {
 	Name string
 	Code string
@@ -73,15 +74,15 @@ func handleMessage(msg *tgbotapi.Message) {
 	text := msg.Text
 
 	saveUser(msg.From)
-
-	// Map-dan o'qishda Lock ishlatamiz
 	mu.RLock()
 	state := userState[chatID]
 	mu.RUnlock()
 
 	switch {
+
 	case text == "/start":
 		sendWelcome(chatID)
+		sendMainMenu(chatID, int64(msg.From.ID))
 
 	case text == "/mybots":
 		sendMyBots(chatID, msg.From.ID)
@@ -94,10 +95,76 @@ func handleMessage(msg *tgbotapi.Message) {
 
 	case state == "wait_amount":
 		ProcessTopUpAmount(chatID, int64(msg.From.ID), text)
-
+	case state == "waiting_broadcast_message":
+		if int64(msg.From.ID) != AdminChatID {
+			send(chatID, "❌ Siz admin emassiz!", nil)
+			return
+		}
+		handleBroadcastMessage(chatID, msg)
 	default:
-		sendMainMenu(chatID)
+		sendMainMenu(chatID, int64(msg.From.ID))
 	}
+}
+
+func handleBroadcastMessage(adminChatID int64, msg *tgbotapi.Message) {
+	mu.Lock()
+	delete(userState, adminChatID)
+	mu.Unlock()
+
+	if (msg.Text == "" && msg.Caption == "") && msg.MessageID == 0 {
+		send(adminChatID, "❌ Xabar matni bo'sh bo'lishi mumkin emas.", nil)
+		return
+	}
+
+	o := orm.NewOrm()
+	var users []models.UserBot
+	_, err := o.QueryTable(new(models.UserBot)).All(&users)
+	if err != nil || len(users) == 0 {
+		send(adminChatID, "❌ Obunachilar topilmadi.", nil)
+		return
+	}
+
+	sentCount := 0
+	failedCount := 0
+
+	for _, user := range users {
+		if user.TgId == 0 || user.TgId == adminChatID {
+			continue
+		}
+
+		var sendErr error
+
+		// Asosiy usul: CopyMessage (tugmalar, format, rasmlar, havolalar saqlanadi)
+		if msg.MessageID != 0 && msg.Chat.ID != 0 {
+			copyCfg := tgbotapi.NewCopyMessage(user.TgId, msg.Chat.ID, msg.MessageID)
+			_, sendErr = CreatorBot.Send(copyCfg)
+		} else {
+			// Fallback: oddiy text
+			textMsg := tgbotapi.NewMessage(user.TgId, msg.Text)
+			if msg.Caption != "" {
+				textMsg.Text = msg.Caption
+			}
+			// Agar oldin HTML yoki Markdown ishlatgan bo'lsangiz, qo'shish mumkin:
+			// textMsg.ParseMode = tgbotapi.ModeHTML
+			_, sendErr = CreatorBot.Send(textMsg)
+		}
+
+		if sendErr != nil {
+			failedCount++
+			log.Printf("Broadcast xato (user %d): %v", user.TgId, sendErr)
+		} else {
+			sentCount++
+		}
+
+		time.Sleep(40 * time.Millisecond) // Telegram limitdan himoya
+	}
+
+	report := fmt.Sprintf(`✅ Broadcast yakunlandi!
+
+✅ Muvaffaqiyatli yuborildi: %d ta
+❌ Yuborilmadi: %d ta`, sentCount, failedCount)
+
+	send(adminChatID, report, nil)
 }
 
 func sendWelcome(chatID int64) {
@@ -181,7 +248,7 @@ func handleMyBalance(chatID int64, userID int64) {
 	}
 }
 
-func sendMainMenu(chatID int64) {
+func sendMainMenu(chatID int64, userID int64) {
 	keyboard := RangliKlaviatura{
 		InlineKeyboard: [][]RangliTugma{
 			{
@@ -190,16 +257,35 @@ func sendMainMenu(chatID int64) {
 			},
 			{
 				{Text: "Balansni to'ldirish", CallbackData: "top_up_balance", Style: "primary", IconCustomEmojiID: "5472098698030781431"},
-				{Text: "Mening balansim", CallbackData: "my_balance", Style: "primary", IconCustomEmojiID: "5469891368308482853"}},
-			{
-				{Text: "WEB PANELGA O'TISH", URL: "http://67.211.211.44:8080", Style: "primary", IconCustomEmojiID: "5470101946260037454"}}},
+				{Text: "Mening balansim", CallbackData: "my_balance", Style: "primary", IconCustomEmojiID: "5469891368308482853"},
+			},
+		},
 	}
+
+	if userID == AdminChatID {
+		keyboard.InlineKeyboard = append(keyboard.InlineKeyboard, []RangliTugma{
+			{
+				Text:              "📢 Ommaviy xabar yuborish",
+				CallbackData:      "broadcast",
+				Style:             "danger",
+				IconCustomEmojiID: "5472400022500190000",
+			},
+		})
+	}
+
+	keyboard.InlineKeyboard = append(keyboard.InlineKeyboard, []RangliTugma{
+		{
+			Text:              "WEB PANELGA O'TISH",
+			URL:               "http://67.211.211.44:8080",
+			Style:             "primary",
+			IconCustomEmojiID: "5470101946260037454",
+		},
+	})
 
 	fromChatID := int64(-1003705222257)
 	messageID := 2
 
 	copyMsg := tgbotapi.NewCopyMessage(chatID, fromChatID, messageID)
-
 	copyMsg.ReplyMarkup = keyboard
 
 	_, err := CreatorBot.Send(copyMsg)
@@ -212,13 +298,10 @@ func handleCallback(bot *tgbotapi.BotAPI, cb *tgbotapi.CallbackQuery) {
 	if cb.Message == nil {
 		return
 	}
-
 	chatID := cb.Message.Chat.ID
 	data := cb.Data
 	userID := cb.From.ID
-
 	bot.Request(tgbotapi.NewCallback(cb.ID, ""))
-
 	if strings.HasPrefix(data, "anime_page:") ||
 		strings.HasPrefix(data, "anime_part:") ||
 		strings.HasPrefix(data, "confirm_delete_anime:") ||
@@ -240,8 +323,6 @@ func handleCallback(bot *tgbotapi.BotAPI, cb *tgbotapi.CallbackQuery) {
 		HandleAnimeCallback(bot, cb)
 		return
 	}
-
-	// ==================== MAIN BOT CALLBACKS ====================
 	switch {
 	case data == "create_bot":
 		sendBotTypeSelection(chatID)
@@ -250,19 +331,26 @@ func handleCallback(bot *tgbotapi.BotAPI, cb *tgbotapi.CallbackQuery) {
 		log.Println("MY_BOTS tugmasi bosildi, User:", userID)
 		sendMyBots(chatID, int64(userID))
 
-	case strings.HasPrefix(data, "type_"):
-		botTypeCode := strings.TrimPrefix(data, "type_")
+	case data == "broadcast":
+		if int64(userID) != AdminChatID {
+			return
+		}
 		mu.Lock()
-		userBotType[chatID] = botTypeCode
-		userState[chatID] = "waiting_token"
+		userState[chatID] = "waiting_broadcast_message"
 		mu.Unlock()
-		sendTokenRequest(chatID, botTypeCode)
+
+		send(chatID, `🔊 Broadcast rejimi yoqildi
+
+Endi yubormoqchi bo'lgan xabaringizni (matn, rasm, video, tugmalar bilan) shu yerga yuboring.
+Xabarni to'g'ridan-to'g'ri nusxa ko'chirib yuborish tavsiya etiladi.`, nil)
 
 	case data == "back_main":
 		mu.Lock()
 		delete(userState, chatID)
 		mu.Unlock()
-		sendMainMenu(chatID)
+
+		// Yangi holat (userID ni ham uzatamiz)
+		sendMainMenu(chatID, int64(userID))
 
 	case data == "top_up_balance":
 		mu.Lock()
@@ -274,6 +362,14 @@ func handleCallback(bot *tgbotapi.BotAPI, cb *tgbotapi.CallbackQuery) {
 
 	case data == "my_balance":
 		handleMyBalance(chatID, int64(userID))
+
+	case strings.HasPrefix(data, "type_"):
+		botTypeCode := strings.TrimPrefix(data, "type_")
+		mu.Lock()
+		userBotType[chatID] = botTypeCode
+		userState[chatID] = "waiting_token"
+		mu.Unlock()
+		sendTokenRequest(chatID, botTypeCode)
 
 	case strings.HasPrefix(data, "delete_bot:"):
 		idStr := strings.TrimPrefix(data, "delete_bot:")
@@ -337,7 +433,6 @@ func handleCallback(bot *tgbotapi.BotAPI, cb *tgbotapi.CallbackQuery) {
 	default:
 		log.Printf("Noma'lum callback data: %s", data)
 	}
-
 }
 
 func sendBotTypeSelection(chatID int64) {

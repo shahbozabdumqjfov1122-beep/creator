@@ -3,6 +3,7 @@ package controllers
 import (
 	"creator/services"
 	"golang.org/x/crypto/bcrypt"
+	"log"
 	"strconv"
 	"time"
 
@@ -602,15 +603,28 @@ func (c *AdminController) MakeBotUserVip() {
 func (c *AdminController) BlockBotUser() {
 	o := orm.NewOrm()
 	idStr := c.Ctx.Input.Param(":id")
-	userId, _ := strconv.ParseInt(idStr, 10, 64)
 
-	var botUser models.BotUser
-	err := o.QueryTable(new(models.BotUser)).Filter("Id", userId).One(&botUser)
-	if err == nil {
-		botUser.IsBlocked = !botUser.IsBlocked
-		o.Update(&botUser, "IsBlocked")
+	userId, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		c.Redirect("/admin/all-users", 302)
+		return
 	}
 
+	var botUser models.BotUser
+	err = o.QueryTable(new(models.BotUser)).Filter("Id", userId).One(&botUser)
+	if err != nil {
+		c.Redirect("/admin/all-users", 302)
+		return
+	}
+
+	// Toggle qilish
+	botUser.IsBlocked = !botUser.IsBlocked
+	_, err = o.Update(&botUser, "IsBlocked")
+	if err != nil {
+		log.Printf("Block update xatosi: %v", err)
+	}
+
+	// Qaytish
 	c.Redirect("/admin/bot-users/"+idStr, 302)
 }
 

@@ -43,10 +43,6 @@ func StartBot(b *models.CreatedBot) {
 
 	o := orm.NewOrm()
 
-	// 🎯 MUHIM TUZATISH: BotType har doim to'g'ri yuklanganini kafolatlaymiz.
-	// CreatedBot struct'ida alohida BotTypeId maydoni yo'q (faqat
-	// `BotType *BotType` rel(fk) sifatida), shuning uchun ID'ni
-	// to'g'ridan-to'g'ri Go orqali o'qib bo'lmaydi — raw SQL kerak.
 	if b.BotType == nil || b.BotType.Code == "" {
 		var bt models.BotType
 		err := o.Raw(`
@@ -93,6 +89,9 @@ func StartBot(b *models.CreatedBot) {
 
 	go runBotLoop(ctx, bot, b)
 	log.Printf("✅ Bot ishga tushdi: @%s (1 kun)", b.BotUsername)
+	mu.Lock()
+	defer mu.Unlock()
+	startBotInternal(b, true)
 }
 
 func StopBot(botId int64) {
@@ -302,10 +301,65 @@ func RestoreActiveBots() {
 		if b.PaidUntil.Before(now) {
 			log.Printf("⏰ Bot @%s muddati tugagan, billing checker hal qiladi", b.BotUsername)
 		}
-
+		go StartBot(b)     // ⬅️ buni
+		go ReconnectBot(b) // ⬅️ shunga almashtiring
 		go StartBot(b)
 		restored++
 	}
 
 	log.Printf("✅ RestoreActiveBots: %d ta bot qayta ishga tushirildi", restored)
+}
+
+func ReconnectBot(b *models.CreatedBot) {
+	mu.Lock()
+	defer mu.Unlock()
+	startBotInternal(b, false)
+}
+
+func startBotInternal(b *models.CreatedBot, resetPaidUntil bool) {
+	o := orm.NewOrm()
+
+	if b.BotType == nil || b.BotType.Code == "" {
+		var bt models.BotType
+		err := o.Raw(`
+            SELECT bt.id, bt.name, bt.code, bt.description, bt.is_active
+            FROM bot_type bt
+            INNER JOIN created_bot cb ON cb.bot_type_id = bt.id
+            WHERE cb.id = ?
+        `, b.Id).QueryRow(&bt)
+		if err == nil {
+			b.BotType = &bt
+		}
+	}
+
+	if cancel, exists := RunningBots[b.Id]; exists {
+		cancel()
+		if oldBot, ok := RunningBotAPIs[b.Id]; ok {
+			oldBot.StopReceivingUpdates()
+		}
+		delete(RunningBots, b.Id)
+		delete(RunningBotAPIs, b.Id)
+	}
+
+	bot, err := tgbotapi.NewBotAPI(b.Token)
+	if err != nil {
+		log.Printf("❌ Bot ishga tushmadi @%s: %v", b.BotUsername, err)
+		return
+	}
+
+	_, _ = bot.Request(tgbotapi.DeleteWebhookConfig{DropPendingUpdates: true})
+
+	ctx, cancel := context.WithCancel(context.Background())
+	RunningBots[b.Id] = cancel
+	RunningBotAPIs[b.Id] = bot
+
+	if resetPaidUntil {
+		b.PaidUntil = time.Now().Add(24 * time.Hour)
+		o.Update(b, "PaidUntil", "IsSuspended")
+		log.Printf("✅ Bot ishga tushdi: @%s (yangi 1 kun to'landi)", b.BotUsername)
+	} else {
+		log.Printf("✅ Bot qayta ulandi: @%s (PaidUntil o'zgarishsiz: %v)", b.BotUsername, b.PaidUntil)
+	}
+
+	go runBotLoop(ctx, bot, b)
 }

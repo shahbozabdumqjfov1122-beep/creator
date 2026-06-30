@@ -37,10 +37,25 @@ func SetSharedCreatorBot(bot *tgbotapi.BotAPI) {
 	CreatorBot = bot
 }
 
+// StartBot — yangi bot yaratilganda yoki to'lov/qo'lda yoqishda chaqiriladi.
+// PaidUntil'ni yangilab, 1 kunlik muddat beradi.
 func StartBot(b *models.CreatedBot) {
 	mu.Lock()
 	defer mu.Unlock()
+	startBotInternal(b, true)
+}
 
+// ReconnectBot — server qayta ishga tushganda (RestoreActiveBots) chaqiriladi.
+// PaidUntil'ga tegmaydi, faqat mavjud holatni davom ettiradi.
+func ReconnectBot(b *models.CreatedBot) {
+	mu.Lock()
+	defer mu.Unlock()
+	startBotInternal(b, false)
+}
+
+// startBotInternal — ikkala holat uchun umumiy logika. mu allaqachon qulflangan deb hisoblanadi,
+// shuning uchun bu funksiya ichida mu.Lock() chaqirilmaydi.
+func startBotInternal(b *models.CreatedBot, resetPaidUntil bool) {
 	o := orm.NewOrm()
 
 	if b.BotType == nil || b.BotType.Code == "" {
@@ -82,16 +97,15 @@ func StartBot(b *models.CreatedBot) {
 	RunningBots[b.Id] = cancel
 	RunningBotAPIs[b.Id] = bot
 
-	// 1 KUNLIK REJIM
-	b.PaidUntil = time.Now().Add(24 * time.Hour)
-
-	o.Update(b, "PaidUntil", "IsSuspended")
+	if resetPaidUntil {
+		b.PaidUntil = time.Now().Add(24 * time.Hour)
+		o.Update(b, "PaidUntil", "IsSuspended")
+		log.Printf("✅ Bot ishga tushdi: @%s (yangi 1 kun to'landi)", b.BotUsername)
+	} else {
+		log.Printf("✅ Bot qayta ulandi: @%s (PaidUntil o'zgarishsiz: %v)", b.BotUsername, b.PaidUntil)
+	}
 
 	go runBotLoop(ctx, bot, b)
-	log.Printf("✅ Bot ishga tushdi: @%s (1 kun)", b.BotUsername)
-	mu.Lock()
-	defer mu.Unlock()
-	startBotInternal(b, true)
 }
 
 func StopBot(botId int64) {
@@ -145,7 +159,7 @@ func runBotLoop(ctx context.Context, bot *tgbotapi.BotAPI, b *models.CreatedBot)
 
 func StartFastBillingChecker() {
 	go func() {
-		ticker := time.NewTicker(30 * time.Second) // Har 30 sekundda tekshiradi
+		ticker := time.NewTicker(30 * time.Second)
 		defer ticker.Stop()
 
 		for range ticker.C {
@@ -168,7 +182,6 @@ func fastBillingCheck() {
 
 	for _, bot := range activeBots {
 		if bot.PaidUntil.Before(now) {
-			// Pul yechish vaqti keldi
 			var user models.UserBot
 			err := o.QueryTable("user_bot").Filter("Id", bot.Owner.Id).One(&user)
 			if err != nil {
@@ -185,7 +198,6 @@ func fastBillingCheck() {
 
 				log.Printf("💰 Bot @%s uchun 1500 so'm yechildi. Yangi muddat: +24 Hour", bot.BotUsername)
 			} else {
-				// Pul yetmadi → to'xtatish
 				StopBot(bot.Id)
 				bot.IsSuspended = true
 				o.Update(&bot, "IsSuspended")
@@ -197,7 +209,6 @@ func fastBillingCheck() {
 }
 
 func StartDailyBillingScheduler() {
-	// Test paytida kerak bo'lmasa, izohga oling yoki o'chirib qo'ying
 	log.Println("💰 Kunlik billing scheduler hozircha o'chirilgan (test rejimi)")
 }
 
@@ -231,7 +242,7 @@ func ResumeBotsAfterTopUp(ownerTgId int64) {
 		if owner.Balance >= DailyPrice {
 			owner.Balance -= DailyPrice
 			b.IsSuspended = false
-			b.PaidUntil = time.Now().Add(24 * time.Hour) // 1 kun
+			b.PaidUntil = time.Now().Add(24 * time.Hour)
 
 			o.Update(&owner, "Balance")
 			o.Update(b, "IsSuspended", "PaidUntil")
@@ -278,7 +289,7 @@ func RestoreActiveBots() {
 	_, err := o.QueryTable("created_bot").
 		Filter("IsActive", true).
 		Filter("IsSuspended", false).
-		All(&activeBots) // ⬅️ bu yerda RelatedSel("BotType") yo'q!
+		All(&activeBots)
 
 	if err != nil {
 		log.Printf("❌ RestoreActiveBots: so'rovda xatolik: %v", err)
@@ -296,70 +307,13 @@ func RestoreActiveBots() {
 	for i := range activeBots {
 		b := &activeBots[i]
 
-		// Muddati tugagan bo'lsa, qayta ishga tushirmasdan billing checker'ga qoldiramiz
-		// (fastBillingCheck o'zi balansni tekshirib, kerak bo'lsa to'xtatadi yoki yangilaydi)
 		if b.PaidUntil.Before(now) {
 			log.Printf("⏰ Bot @%s muddati tugagan, billing checker hal qiladi", b.BotUsername)
 		}
-		go StartBot(b)     // ⬅️ buni
-		go ReconnectBot(b) // ⬅️ shunga almashtiring
-		go StartBot(b)
+
+		go ReconnectBot(b)
 		restored++
 	}
 
 	log.Printf("✅ RestoreActiveBots: %d ta bot qayta ishga tushirildi", restored)
-}
-
-func ReconnectBot(b *models.CreatedBot) {
-	mu.Lock()
-	defer mu.Unlock()
-	startBotInternal(b, false)
-}
-
-func startBotInternal(b *models.CreatedBot, resetPaidUntil bool) {
-	o := orm.NewOrm()
-
-	if b.BotType == nil || b.BotType.Code == "" {
-		var bt models.BotType
-		err := o.Raw(`
-            SELECT bt.id, bt.name, bt.code, bt.description, bt.is_active
-            FROM bot_type bt
-            INNER JOIN created_bot cb ON cb.bot_type_id = bt.id
-            WHERE cb.id = ?
-        `, b.Id).QueryRow(&bt)
-		if err == nil {
-			b.BotType = &bt
-		}
-	}
-
-	if cancel, exists := RunningBots[b.Id]; exists {
-		cancel()
-		if oldBot, ok := RunningBotAPIs[b.Id]; ok {
-			oldBot.StopReceivingUpdates()
-		}
-		delete(RunningBots, b.Id)
-		delete(RunningBotAPIs, b.Id)
-	}
-
-	bot, err := tgbotapi.NewBotAPI(b.Token)
-	if err != nil {
-		log.Printf("❌ Bot ishga tushmadi @%s: %v", b.BotUsername, err)
-		return
-	}
-
-	_, _ = bot.Request(tgbotapi.DeleteWebhookConfig{DropPendingUpdates: true})
-
-	ctx, cancel := context.WithCancel(context.Background())
-	RunningBots[b.Id] = cancel
-	RunningBotAPIs[b.Id] = bot
-
-	if resetPaidUntil {
-		b.PaidUntil = time.Now().Add(24 * time.Hour)
-		o.Update(b, "PaidUntil", "IsSuspended")
-		log.Printf("✅ Bot ishga tushdi: @%s (yangi 1 kun to'landi)", b.BotUsername)
-	} else {
-		log.Printf("✅ Bot qayta ulandi: @%s (PaidUntil o'zgarishsiz: %v)", b.BotUsername, b.PaidUntil)
-	}
-
-	go runBotLoop(ctx, bot, b)
 }

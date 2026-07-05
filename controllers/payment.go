@@ -9,8 +9,6 @@ import (
 	"time"
 
 	"creator/models"
-	"creator/services"
-
 	"github.com/beego/beego/v2/client/orm"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
@@ -202,7 +200,7 @@ func HandleAdminApprove(invoiceID int64) {
 		return
 	}
 
-	topUpUserBalance(invoice.UserId, invoice.Amount)
+	topUpUserBalance(invoice.UserId, invoice.Amount) // faqat bitta marta
 
 	successText := fmt.Sprintf(
 		"✅ To'lov tasdiqlandi!\n\n"+
@@ -210,13 +208,8 @@ func HandleAdminApprove(invoiceID int64) {
 			"🎉 Mablag' hisobingizga muvaffaqiyatli tushdi!",
 		invoice.Amount,
 	)
-	send(invoice.UserId, successText, nil)
 	sendMarkdown(invoice.UserId, successText)
-	// HandleAdminApprove oxirida, successText yuborilgandan keyin qo'shing:
-	topUpUserBalance(invoice.UserId, invoice.Amount)
 
-	// ... successText yuborilgandan keyin
-	services.ResumeBotsAfterTopUp(invoice.UserId) // ← qo'shimcha chaqiruv
 	send(AdminChatID, fmt.Sprintf("✅ Tasdiqlandi: UserID=%d, Summa=%.0f so'm", invoice.UserId, invoice.Amount), nil)
 
 	log.Printf("✅ To'lov admin tomonidan tasdiqlandi: UserID=%d, Summa=%.0f", invoice.UserId, invoice.Amount)
@@ -293,8 +286,6 @@ func topUpUserBalance(userID int64, amount float64) {
 		log.Printf("Balansni yangilashda xato: %v", updateErr)
 		return
 	}
-	o.Update(&user, "Balance")
-	services.ResumeBotsAfterTopUp(userID)
 
 	log.Printf("💰 Balans yangilandi: UserID=%d, +%.0f so'm", userID, amount)
 }

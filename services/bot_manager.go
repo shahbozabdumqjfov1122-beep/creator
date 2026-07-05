@@ -75,6 +75,27 @@ func startBotInternal(b *models.CreatedBot, resetPaidUntil bool) {
 		}
 	}
 
+	// 🎯 YANGI: bot birinchi marta ishga tushayotgan bo'lsa, avval balansdan 1.500 so'm yechamiz
+	if resetPaidUntil {
+		var owner models.UserBot
+		if err := o.QueryTable("user_bot").Filter("Id", b.Owner.Id).One(&owner); err != nil {
+			log.Printf("❌ StartBot: egasi topilmadi (Bot Id=%d): %v", b.Id, err)
+			return
+		}
+
+		if owner.Balance < DailyPrice {
+			log.Printf("⛔ Bot @%s ishga tushmadi: balans yetarli emas (%.0f so'm)", b.BotUsername, owner.Balance)
+			b.IsSuspended = true
+			o.Update(b, "IsSuspended")
+			NotifyOwner(owner.TgId, b, false)
+			return
+		}
+
+		owner.Balance -= DailyPrice
+		o.Update(&owner, "Balance")
+		log.Printf("💰 Bot @%s uchun 1.500 so'm darhol yechildi. Qolgan balans: %.0f", b.BotUsername, owner.Balance)
+	}
+
 	// Eski botni to'xtatish
 	if cancel, exists := RunningBots[b.Id]; exists {
 		cancel()
@@ -99,6 +120,7 @@ func startBotInternal(b *models.CreatedBot, resetPaidUntil bool) {
 
 	if resetPaidUntil {
 		b.PaidUntil = time.Now().Add(24 * time.Hour)
+		b.IsSuspended = false
 		o.Update(b, "PaidUntil", "IsSuspended")
 		log.Printf("✅ Bot ishga tushdi: @%s (yangi 1 kun to'landi)", b.BotUsername)
 	} else {

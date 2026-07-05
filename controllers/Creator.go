@@ -580,7 +580,7 @@ func handleTokenInput(chatID int64, userTgID int64, token string) {
 		return
 	}
 
-	go services.StartBot(newBot)
+	go services.StartNewBot(newBot) // 🎯 TUZATILDI: 1-kun bepul, pul yechilmaydi
 
 	keyboard := tgbotapi.NewInlineKeyboardMarkup(
 		tgbotapi.NewInlineKeyboardRow(

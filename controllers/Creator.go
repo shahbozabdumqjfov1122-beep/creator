@@ -819,18 +819,17 @@ func activateBot(chatID int64, userTgID int64, botID int64) {
 	var bot models.CreatedBot
 	err := o.QueryTable("created_bot").
 		Filter("Id", botID).
-		RelatedSel("Owner").   // ⬅️ aniq nom bilan
-		RelatedSel("BotType"). // ⬅️ shuni qo'shdik — asosiy tuzatish
+		RelatedSel("Owner").
+		RelatedSel("BotType").
 		One(&bot)
 	if err != nil || bot.Owner == nil || bot.Owner.TgId != userTgID {
 		send(chatID, "❌ Bot topilmadi yoki sizga tegishli emas.", nil)
 		return
 	}
 
-	if bot.IsSuspended {
-		send(chatID, "⚠️ Bu bot balans yetarli emasligi sababli to'xtatilgan. Avval balansni to'ldiring.", nil)
-		return
-	}
+	// 🎯 TUZATISH: IsSuspended tekshiruvi olib tashlandi.
+	// Balansni StartBot (ModeResume) o'zi tekshiradi va kerak bo'lsa 1.500 so'm yechadi.
+	// Agar balans yetmasa, StartBot o'zi IsSuspended=true qilib qo'yadi va NotifyOwner orqali xabar yuboradi.
 
 	bot.IsActive = true
 	_, err = o.Update(&bot, "IsActive")
@@ -839,9 +838,9 @@ func activateBot(chatID int64, userTgID int64, botID int64) {
 		return
 	}
 
-	services.StartBot(&bot) // 🎯 runtime'da pollingni qayta ishga tushiradi
+	services.StartBot(&bot) // balansni tekshiradi, yetarli bo'lsa yechadi va botni ishga tushiradi
 
-	send(chatID, fmt.Sprintf("@%s qayta yoqildi.", bot.BotUsername), nil)
+	send(chatID, fmt.Sprintf("✅ @%s qayta yoqish uchun so'rov yuborildi.", bot.BotUsername), nil)
 }
 
 func handleTokenChangeInput(chatID int64, userTgID int64, newToken string) {

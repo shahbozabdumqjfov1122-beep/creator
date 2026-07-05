@@ -37,25 +37,40 @@ func SetSharedCreatorBot(bot *tgbotapi.BotAPI) {
 	CreatorBot = bot
 }
 
-// StartBot — yangi bot yaratilganda yoki to'lov/qo'lda yoqishda chaqiriladi.
-// PaidUntil'ni yangilab, 1 kunlik muddat beradi.
+// startMode - bot qanday holatda ishga tushayotganini bildiradi
+type startMode int
+
+const (
+	ModeNewBot    startMode = iota // 🎁 birinchi marta yaratilganda — 1 kun BEPUL
+	ModeResume                     // 💰 to'xtatilgandan keyin qayta yoqilganda — darhol to'lov
+	ModeReconnect                  // 🔄 server qayta ishga tushganda — hech narsa o'zgarmaydi
+)
+
+// StartNewBot — FAQAT bot birinchi marta yaratilganda chaqiriladi.
+// Balansdan HECH NARSA yechilmaydi, 1-kun bepul beriladi.
+func StartNewBot(b *models.CreatedBot) {
+	mu.Lock()
+	defer mu.Unlock()
+	startBotInternal(b, ModeNewBot)
+}
+
+// StartBot — to'xtatilgan botni qayta yoqishda chaqiriladi (masalan "Qayta yoqish" tugmasi,
+// yoki balans to'ldirilgach ResumeBotsAfterTopUp orqali). Darhol 1.500 so'm yechiladi.
 func StartBot(b *models.CreatedBot) {
 	mu.Lock()
 	defer mu.Unlock()
-	startBotInternal(b, true)
+	startBotInternal(b, ModeResume)
 }
 
 // ReconnectBot — server qayta ishga tushganda (RestoreActiveBots) chaqiriladi.
-// PaidUntil'ga tegmaydi, faqat mavjud holatni davom ettiradi.
+// PaidUntil'ga tegmaydi, balans yechilmaydi, faqat mavjud holatni davom ettiradi.
 func ReconnectBot(b *models.CreatedBot) {
 	mu.Lock()
 	defer mu.Unlock()
-	startBotInternal(b, false)
+	startBotInternal(b, ModeReconnect)
 }
 
-// startBotInternal — ikkala holat uchun umumiy logika. mu allaqachon qulflangan deb hisoblanadi,
-// shuning uchun bu funksiya ichida mu.Lock() chaqirilmaydi.
-func startBotInternal(b *models.CreatedBot, resetPaidUntil bool) {
+func startBotInternal(b *models.CreatedBot, mode startMode) {
 	o := orm.NewOrm()
 
 	if b.BotType == nil || b.BotType.Code == "" {
@@ -75,8 +90,8 @@ func startBotInternal(b *models.CreatedBot, resetPaidUntil bool) {
 		}
 	}
 
-	// 🎯 YANGI: bot birinchi marta ishga tushayotgan bo'lsa, avval balansdan 1.500 so'm yechamiz
-	if resetPaidUntil {
+	// 💰 Faqat "qayta yoqish" holatida darhol pul yechiladi. Yangi bot uchun — BEPUL.
+	if mode == ModeResume {
 		var owner models.UserBot
 		if err := o.QueryTable("user_bot").Filter("Id", b.Owner.Id).One(&owner); err != nil {
 			log.Printf("❌ StartBot: egasi topilmadi (Bot Id=%d): %v", b.Id, err)
@@ -118,12 +133,20 @@ func startBotInternal(b *models.CreatedBot, resetPaidUntil bool) {
 	RunningBots[b.Id] = cancel
 	RunningBotAPIs[b.Id] = bot
 
-	if resetPaidUntil {
+	switch mode {
+	case ModeNewBot:
 		b.PaidUntil = time.Now().Add(24 * time.Hour)
 		b.IsSuspended = false
 		o.Update(b, "PaidUntil", "IsSuspended")
-		log.Printf("✅ Bot ishga tushdi: @%s (yangi 1 kun to'landi)", b.BotUsername)
-	} else {
+		log.Printf("🎁 Bot ishga tushdi: @%s (1-kun BEPUL, 2-kundan to'lov boshlanadi)", b.BotUsername)
+
+	case ModeResume:
+		b.PaidUntil = time.Now().Add(24 * time.Hour)
+		b.IsSuspended = false
+		o.Update(b, "PaidUntil", "IsSuspended")
+		log.Printf("✅ Bot ishga tushdi: @%s (1 kun to'landi)", b.BotUsername)
+
+	case ModeReconnect:
 		log.Printf("✅ Bot qayta ulandi: @%s (PaidUntil o'zgarishsiz: %v)", b.BotUsername, b.PaidUntil)
 	}
 
@@ -234,6 +257,8 @@ func StartDailyBillingScheduler() {
 	log.Println("💰 Kunlik billing scheduler hozircha o'chirilgan (test rejimi)")
 }
 
+// ResumeBotsAfterTopUp — balans to'ldirilgach to'xtatilgan botlarni qayta yoqadi.
+// StartBot (ModeResume) o'zi balansni yechadi, shuning uchun bu yerda qo'lda yechish OLIB TASHLANDI.
 func ResumeBotsAfterTopUp(ownerTgId int64) {
 	o := orm.NewOrm()
 
@@ -261,23 +286,22 @@ func ResumeBotsAfterTopUp(ownerTgId int64) {
 	for i := range suspendedBots {
 		b := &suspendedBots[i]
 
-		if owner.Balance >= DailyPrice {
-			owner.Balance -= DailyPrice
-			b.IsSuspended = false
-			b.PaidUntil = time.Now().Add(24 * time.Hour)
+		// har safar balansni bazadan yangilab olamiz (StartBot ichida o'zgargan bo'lishi mumkin)
+		if err := o.QueryTable("user_bot").Filter("Id", owner.Id).One(&owner); err != nil {
+			log.Printf("❌ ResumeBots: balansni yangilab bo'lmadi: %v", err)
+			break
+		}
 
-			o.Update(&owner, "Balance")
-			o.Update(b, "IsSuspended", "PaidUntil")
-
-			go StartBot(b)
-			NotifyOwner(ownerTgId, b, true)
-
-			resumed++
-			log.Printf("✅ Bot #%d (@%s) avtomatik ishga tushdi", b.Id, b.BotUsername)
-		} else {
+		if owner.Balance < DailyPrice {
 			log.Printf("⛔ Balans yetarli emas, qolgan botlar ochilmaydi")
 			break
 		}
+
+		StartBot(b) // ✅ balansni o'zi yechadi va botni ishga tushiradi (ModeResume)
+		NotifyOwner(ownerTgId, b, true)
+
+		resumed++
+		log.Printf("✅ Bot #%d (@%s) avtomatik ishga tushdi", b.Id, b.BotUsername)
 	}
 
 	if resumed == 0 {

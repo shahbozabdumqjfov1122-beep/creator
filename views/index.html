@@ -1535,21 +1535,11 @@
             {{if gt .TotalBotPages 1}}
                 <div class="pagination">
                     {{if gt .BotPage 1}}
-                        <a href="/admin?bot_page=1&user_page={{.UserPage}}" class="page-btn" title="Birinchi sahifa">« Boshi</a>
-                        <a href="/admin?bot_page={{sub .BotPage 1}}&user_page={{.UserPage}}" class="page-btn">← Oldingi</a>
-                    {{else}}
-                        <span class="page-btn page-btn-disabled">« Boshi</span>
-                        <span class="page-btn page-btn-disabled">← Oldingi</span>
+                        <a href="/admin/dashboard?bot_page={{sub .BotPage 1}}&amp;user_page={{.UserPage}}" class="page-btn">← Oldingi</a>
                     {{end}}
-
-                    <span class="page-info">Sahifa <strong>{{.BotPage}}</strong> / {{.TotalBotPages}}</span>
-
+                    <span class="page-info">Sahifa {{.BotPage}} / {{.TotalBotPages}}</span>
                     {{if lt .BotPage .TotalBotPages}}
-                        <a href="/admin?bot_page={{add .BotPage 1}}&user_page={{.UserPage}}" class="page-btn">Keyingi →</a>
-                        <a href="/admin?bot_page={{.TotalBotPages}}&user_page={{.UserPage}}" class="page-btn" title="Oxirgi sahifa">Oxiri »</a>
-                    {{else}}
-                        <span class="page-btn page-btn-disabled">Keyingi →</span>
-                        <span class="page-btn page-btn-disabled">Oxiri »</span>
+                        <a href="/admin/dashboard?bot_page={{add .BotPage 1}}&amp;user_page={{.UserPage}}" class="page-btn">Keyingi →</a>
                     {{end}}
                 </div>
             {{end}}
@@ -1649,21 +1639,13 @@
             {{if gt .TotalUserPages 1}}
                 <div class="pagination">
                     {{if gt .UserPage 1}}
-                        <a href="/admin?bot_page={{.BotPage}}&user_page=1" class="page-btn" title="Birinchi sahifa">« Boshi</a>
-                        <a href="/admin?bot_page={{.BotPage}}&user_page={{sub .UserPage 1}}" class="page-btn">← Oldingi</a>
-                    {{else}}
-                        <span class="page-btn page-btn-disabled">« Boshi</span>
-                        <span class="page-btn page-btn-disabled">← Oldingi</span>
+                        <a href="/admin/dashboard?bot_page={{.BotPage}}&amp;user_page={{sub .UserPage 1}}" class="page-btn">← Oldingi</a>
+                        <a href="/admin/dashboard?bot_page={{.BotPage}}&amp;user_page=1" class="page-btn" title="Birinchi sahifa">« Boshi</a>
                     {{end}}
-
-                    <span class="page-info">Sahifa <strong>{{.UserPage}}</strong> / {{.TotalUserPages}}</span>
-
+                    <span class="page-info">Sahifa {{.UserPage}} / {{.TotalUserPages}}</span>
                     {{if lt .UserPage .TotalUserPages}}
-                        <a href="/admin?bot_page={{.BotPage}}&user_page={{add .UserPage 1}}" class="page-btn">Keyingi →</a>
-                        <a href="/admin?bot_page={{.BotPage}}&user_page={{.TotalUserPages}}" class="page-btn" title="Oxirgi sahifa">Oxiri »</a>
-                    {{else}}
-                        <span class="page-btn page-btn-disabled">Keyingi →</span>
-                        <span class="page-btn page-btn-disabled">Oxiri »</span>
+                        <a href="/admin/dashboard?bot_page={{.BotPage}}&amp;user_page={{add .UserPage 1}}" class="page-btn">Keyingi →</a>
+                        <a href="/admin/dashboard?bot_page={{.BotPage}}&amp;user_page={{.TotalUserPages}}" class="page-btn" title="Oxirgi sahifa">Oxiri »</a>
                     {{end}}
                 </div>
             {{end}}

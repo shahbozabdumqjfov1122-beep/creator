@@ -45,4 +45,7 @@ func init() {
 	beego.InsertFilter("/admin/*", beego.BeforeRouter, controllers.AdminAuthFilter)
 	beego.InsertFilter("/", beego.BeforeRouter, controllers.AdminAuthFilter)
 
+	beego.AddFuncMap("add", func(a, b int) int { return a + b })
+	beego.AddFuncMap("sub", func(a, b int) int { return a - b })
+
 }

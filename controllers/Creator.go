@@ -673,7 +673,7 @@ func sendMyBots(chatID int64, userTgID int64) {
 
 		var keyboard RangliKlaviatura
 
-		if !b.IsActive {
+		if !b.IsActive || b.IsSuspended {
 			keyboard = RangliKlaviatura{
 				InlineKeyboard: [][]RangliTugma{
 					{{Text: "Qayta yoqish", CallbackData: fmt.Sprintf("activate_bot:%d", b.Id), Style: "success", IconCustomEmojiID: "5472371840770938927"}},

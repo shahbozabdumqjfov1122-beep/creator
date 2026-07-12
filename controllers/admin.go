@@ -4,6 +4,7 @@ import (
 	"creator/services"
 	"golang.org/x/crypto/bcrypt"
 	"log"
+	"math"
 	"strconv"
 	"time"
 
@@ -93,26 +94,52 @@ func (c *AdminController) Dashboard() {
 		botUserCount = 0
 	}
 
-	// Oxirgi botlar
+	// ---------- Botlar uchun sahifalash ----------
+	const botsPerPage = 50
+	botPage, _ := strconv.Atoi(c.GetString("bot_page", "1"))
+	if botPage < 1 {
+		botPage = 1
+	}
+	botOffset := (botPage - 1) * botsPerPage
+
 	var latestBots []models.CreatedBot
 	_, err = o.QueryTable(new(models.CreatedBot)).
 		RelatedSel("BotType", "Owner").
 		OrderBy("-Id").
-		Limit(20).
+		Limit(botsPerPage, botOffset).
 		All(&latestBots)
 	if err != nil {
 		latestBots = make([]models.CreatedBot, 0)
 	}
 
-	// Oxirgi foydalanuvchilar
+	totalBotPages := int(math.Ceil(float64(botCount) / float64(botsPerPage)))
+	if totalBotPages < 1 {
+		totalBotPages = 1
+	}
+
+	// ---------- Foydalanuvchilar uchun sahifalash ----------
+	const usersPerPage = 50
+	userPage, _ := strconv.Atoi(c.GetString("user_page", "1"))
+	if userPage < 1 {
+		userPage = 1
+	}
+	userOffset := (userPage - 1) * usersPerPage
+
 	var users []*models.BotUser
 	_, usersErr := o.QueryTable(new(models.BotUser)).
 		RelatedSel("Bot").
 		OrderBy("-JoinedAt").
-		Limit(100).
+		Limit(usersPerPage, userOffset).
 		All(&users)
 	if usersErr != nil {
 		users = make([]*models.BotUser, 0)
+	}
+
+	// Jami foydalanuvchilar soni (barcha yozuvlar, unikal emas)
+	totalBotUserRows, _ := o.QueryTable(new(models.BotUser)).Count()
+	totalUserPages := int(math.Ceil(float64(totalBotUserRows) / float64(usersPerPage)))
+	if totalUserPages < 1 {
+		totalUserPages = 1
 	}
 
 	// Ma'lumotlarni shablonga uzatish
@@ -125,6 +152,12 @@ func (c *AdminController) Dashboard() {
 	c.Data["LatestBots"] = latestBots
 	c.Data["Users"] = users
 	c.Data["RealUserCount"] = len(users)
+
+	// Pagination ma'lumotlari
+	c.Data["BotPage"] = botPage
+	c.Data["TotalBotPages"] = totalBotPages
+	c.Data["UserPage"] = userPage
+	c.Data["TotalUserPages"] = totalUserPages
 
 	c.TplName = "index.html"
 }

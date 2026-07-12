@@ -1462,6 +1462,7 @@
         <div class="card">
             <div class="card-title">
                 <i class="ti ti-robot"></i> Oxirgi Yaratilgan Botlar (CreatedBot)
+                <span style="margin-left:auto;font-size:13px;color:#64748b">Jami: {{.BotCount}} ta</span>
             </div>
             <div class="table-wrap">
                 <table>
@@ -1529,6 +1530,29 @@
                     </tbody>
                 </table>
             </div>
+
+            <!-- Botlar uchun pagination -->
+            {{if gt .TotalBotPages 1}}
+                <div class="pagination">
+                    {{if gt .BotPage 1}}
+                        <a href="/admin?bot_page=1&user_page={{.UserPage}}" class="page-btn" title="Birinchi sahifa">« Boshi</a>
+                        <a href="/admin?bot_page={{sub .BotPage 1}}&user_page={{.UserPage}}" class="page-btn">← Oldingi</a>
+                    {{else}}
+                        <span class="page-btn page-btn-disabled">« Boshi</span>
+                        <span class="page-btn page-btn-disabled">← Oldingi</span>
+                    {{end}}
+
+                    <span class="page-info">Sahifa <strong>{{.BotPage}}</strong> / {{.TotalBotPages}}</span>
+
+                    {{if lt .BotPage .TotalBotPages}}
+                        <a href="/admin?bot_page={{add .BotPage 1}}&user_page={{.UserPage}}" class="page-btn">Keyingi →</a>
+                        <a href="/admin?bot_page={{.TotalBotPages}}&user_page={{.UserPage}}" class="page-btn" title="Oxirgi sahifa">Oxiri »</a>
+                    {{else}}
+                        <span class="page-btn page-btn-disabled">Keyingi →</span>
+                        <span class="page-btn page-btn-disabled">Oxiri »</span>
+                    {{end}}
+                </div>
+            {{end}}
         </div>
 
         <div class="breadcrumb">
@@ -1539,7 +1563,7 @@
         <div class="card">
             <div class="card-title">
                 <i class="ti ti-users"></i> Barcha Botlarning Obunachilari
-                <span style="margin-left:auto;font-size:13px;color:#64748b">Jami: {{.BotUserCount}} ta</span>
+                <span style="margin-left:auto;font-size:13px;color:#64748b">Jami: {{.BotUserCount}} ta (unikal)</span>
             </div>
             <div class="table-wrap">
                 <table class="users-table">
@@ -1620,7 +1644,74 @@
                     </tbody>
                 </table>
             </div>
+
+            <!-- Foydalanuvchilar uchun pagination -->
+            {{if gt .TotalUserPages 1}}
+                <div class="pagination">
+                    {{if gt .UserPage 1}}
+                        <a href="/admin?bot_page={{.BotPage}}&user_page=1" class="page-btn" title="Birinchi sahifa">« Boshi</a>
+                        <a href="/admin?bot_page={{.BotPage}}&user_page={{sub .UserPage 1}}" class="page-btn">← Oldingi</a>
+                    {{else}}
+                        <span class="page-btn page-btn-disabled">« Boshi</span>
+                        <span class="page-btn page-btn-disabled">← Oldingi</span>
+                    {{end}}
+
+                    <span class="page-info">Sahifa <strong>{{.UserPage}}</strong> / {{.TotalUserPages}}</span>
+
+                    {{if lt .UserPage .TotalUserPages}}
+                        <a href="/admin?bot_page={{.BotPage}}&user_page={{add .UserPage 1}}" class="page-btn">Keyingi →</a>
+                        <a href="/admin?bot_page={{.BotPage}}&user_page={{.TotalUserPages}}" class="page-btn" title="Oxirgi sahifa">Oxiri »</a>
+                    {{else}}
+                        <span class="page-btn page-btn-disabled">Keyingi →</span>
+                        <span class="page-btn page-btn-disabled">Oxiri »</span>
+                    {{end}}
+                </div>
+            {{end}}
         </div>
+
+        <style>
+            .pagination {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 10px;
+                padding: 16px;
+                flex-wrap: wrap;
+                border-top: 1px solid rgba(148,163,184,0.15);
+            }
+            .page-btn {
+                padding: 6px 14px;
+                background: #1e293b;
+                color: #3b82f6;
+                border-radius: 6px;
+                text-decoration: none;
+                font-size: 13px;
+                font-weight: 500;
+                transition: background 0.15s ease;
+                white-space: nowrap;
+            }
+            .page-btn:hover {
+                background: #334155;
+            }
+            .page-btn-disabled {
+                padding: 6px 14px;
+                background: #0f172a;
+                color: #475569;
+                border-radius: 6px;
+                font-size: 13px;
+                font-weight: 500;
+                cursor: not-allowed;
+                white-space: nowrap;
+            }
+            .page-info {
+                color: #94a3b8;
+                font-size: 13px;
+                margin: 0 6px;
+            }
+            .page-info strong {
+                color: #e2e8f0;
+            }
+        </style>
 
         <style>
             .row-blocked {

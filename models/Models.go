@@ -74,6 +74,7 @@ type Anime struct {
 	Bot        *CreatedBot `orm:"rel(fk);column(bot_id)"`
 	Name       string      `orm:"size(300)"`
 	Code       string      `orm:"size(100)"`
+	CoverKind  string      `orm:"size(20);default(photo);column(cover_kind)"` // 🎯 yangi: "photo", "video", "document" yoki "" (yo'q)
 	PhotoID    string      `orm:"size(500);column(photo_id)"`
 	PartsCount int         `orm:"default(0);column(parts_count)"`
 	IsActive   bool        `orm:"default(true);column(is_active)"`

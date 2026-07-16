@@ -23,6 +23,7 @@ func HandleKinoBotMessage(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgbot
 	}
 	isNewCommand :=
 		msg.Text == "/admin" ||
+			msg.Text == "🎬 Tez joylash" ||
 			msg.Text == "/addkino" ||
 			msg.Text == "/addchannel" ||
 			msg.Text == "/delchannel" ||
@@ -64,7 +65,10 @@ func HandleKinoBotMessage(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgbot
 			if RouteKinoUploadState(bot, b, msg, state) {
 				return
 			}
-
+			// 🎯 Yangi qator — Tez joylash state'lari
+			if RouteKinoQuickState(bot, b, msg, state) {
+				return
+			}
 			// 2. Kino tahrirlash (Edit) holatlari bo'lsa
 			if RouteKinoEditState(bot, b, msg, state) {
 				return
@@ -102,7 +106,9 @@ func HandleKinoBotMessage(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgbot
 		case "➕ Kino joylash", "/addkino":
 			StartKinoUpload(bot, b, msg)
 			return
-
+		case "🎬 Tez joylash": // 🎯 yangi
+			StartKinoQuickUpload(bot, b, msg)
+			return
 		case "➕ Kanal qo‘shish", "/addchannel":
 			HandleAdminCommands(bot, b, msg)
 			return
@@ -253,17 +259,18 @@ func showKinoAdminPanel(bot *tgbotapi.BotAPI, chatID int64) {
 		),
 		tgbotapi.NewKeyboardButtonRow(
 			tgbotapi.NewKeyboardButton("➕ Kino joylash"),
+			tgbotapi.NewKeyboardButton("🎬 Tez joylash"), // 🎯 yangi tugma
+		),
+		tgbotapi.NewKeyboardButtonRow(
 			tgbotapi.NewKeyboardButton("🗑 Kinoni o‘chirish"),
+			tgbotapi.NewKeyboardButton("✏️ Kinoni tahrirlash"),
 		),
 		tgbotapi.NewKeyboardButtonRow(
 			tgbotapi.NewKeyboardButton("➕ Kanal qo‘shish"),
 			tgbotapi.NewKeyboardButton("➖ Kanal o‘chirish"),
 		),
 		tgbotapi.NewKeyboardButtonRow(
-			tgbotapi.NewKeyboardButton("✏️ Kinoni tahrirlash"),
 			tgbotapi.NewKeyboardButton("📢 Reklama"),
-		),
-		tgbotapi.NewKeyboardButtonRow(
 			tgbotapi.NewKeyboardButton("👤 Adminlar"),
 		),
 	)
@@ -274,7 +281,121 @@ func showKinoAdminPanel(bot *tgbotapi.BotAPI, chatID int64) {
 	bot.Send(msg)
 }
 
-// ==================== /start VA KOD ORQALI QIDIRISH ====================
+// ==================== TEZ JOYLASH (KINO) ====================
+
+func StartKinoQuickUpload(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgbotapi.Message) {
+	userID := msg.From.ID
+	chatID := msg.Chat.ID
+
+	mu.Lock()
+	adminState[userID] = "waiting_quick_kino_name"
+	mu.Unlock()
+
+	sendUserBot(bot, chatID, "🎬 *Tez joylash*\n\nKino nomini yozib yuboring:")
+}
+
+func RouteKinoQuickState(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgbotapi.Message, state string) bool {
+	userID := msg.From.ID
+	chatID := msg.Chat.ID
+
+	// 1-qadam: nom kiritildi
+	if state == "waiting_quick_kino_name" {
+		name := strings.TrimSpace(msg.Text)
+		if name == "" {
+			sendUserBot(bot, chatID, "❌ Iltimos, nomni matn ko'rinishida yuboring:")
+			return true
+		}
+
+		mu.Lock()
+		quickKinoTemp[userID] = name
+		adminState[userID] = "waiting_quick_kino_file"
+		mu.Unlock()
+
+		sendUserBot(bot, chatID, "📎 Endi shu kino uchun video, rasm yoki hujjat yuboring:")
+		return true
+	}
+
+	// 2-qadam: fayl yuborildi -> kino avtomatik yaratiladi
+	if state == "waiting_quick_kino_file" {
+		var fileID, kind, photoID string
+
+		if msg.Video != nil {
+			fileID = msg.Video.FileID
+			kind = "video"
+			// 🎯 Video thumbnail'ini PhotoID sifatida ISHLATMAYMIZ — Telegram uni rad etadi
+		} else if msg.Document != nil {
+			fileID = msg.Document.FileID
+			kind = "document"
+		} else if msg.Photo != nil && len(msg.Photo) > 0 {
+			fileID = msg.Photo[len(msg.Photo)-1].FileID
+			kind = "photo"
+			photoID = fileID
+		} else {
+			sendUserBot(bot, chatID, "❌ Iltimos, faqat video, rasm yoki hujjat yuboring:")
+			return true
+		}
+
+		mu.Lock()
+		name := quickKinoTemp[userID]
+		delete(quickKinoTemp, userID)
+		delete(adminState, userID)
+		mu.Unlock()
+
+		o := orm.NewOrm()
+
+		// Kodni avtomatik generatsiya qilamiz va bazada takrorlanmasligini tekshiramiz
+		var code string
+		for {
+			code = generateRandomCode(8)
+			exist := o.QueryTable(new(models.Kino)).
+				Filter("Bot__Id", b.Id).
+				Filter("Code", code).
+				Exist()
+			if !exist {
+				break
+			}
+		}
+
+		kino := models.Kino{
+			Bot:        b,
+			Name:       name,
+			Code:       code,
+			PhotoID:    photoID,
+			PartsCount: 1,
+		}
+
+		if _, err := o.Insert(&kino); err != nil {
+			log.Printf("Tez joylashda kino yaratishda xatolik: %v", err)
+			sendUserBot(bot, chatID, "❌ Kino yaratishda xatolik yuz berdi.")
+			return true
+		}
+
+		part := models.KinoPart{
+			Kino:      &kino,
+			PartOrder: 1,
+			FileID:    fileID,
+			Kind:      kind,
+		}
+		if _, err := o.Insert(&part); err != nil {
+			log.Printf("Tez joylashda qism qo'shishda xatolik: %v", err)
+		}
+
+		link := fmt.Sprintf("https://t.me/%s?start=%s", bot.Self.UserName, code)
+
+		text := fmt.Sprintf(
+			"✅ *Kino muvaffaqiyatli joylandi!*\n\n📌 Nomi: %s\n🎬 Qismlar: 1\n🔗 Havola: `%s`",
+			name, link,
+		)
+		reply := tgbotapi.NewMessage(chatID, text)
+		reply.ParseMode = "Markdown"
+		bot.Send(reply)
+
+		showKinoAdminPanel(bot, chatID)
+		return true
+	}
+
+	return false
+}
 
 func handleKinoStart(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgbotapi.Message) {
 	args := strings.TrimSpace(strings.TrimPrefix(msg.Text, "/start"))
@@ -305,10 +426,12 @@ func handleKinoByCode(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgbotapi.
 		fmt.Println("KINO NOT FOUND:", err)
 
 		text := "🔍 Afsuski, bunday kodli kino topilmadi...\n\n"
-
 		respMsg := tgbotapi.NewMessage(msg.Chat.ID, text)
 		respMsg.ParseMode = "Markdown"
-		bot.Send(respMsg)
+
+		if _, sendErr := bot.Send(respMsg); sendErr != nil {
+			fmt.Println("SEND NOT-FOUND MESSAGE ERROR:", sendErr)
+		}
 		return
 	}
 
@@ -317,29 +440,116 @@ func handleKinoByCode(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgbotapi.
 	fmt.Println("Name:", kino.Name)
 	fmt.Println("Code:", kino.Code)
 	fmt.Println("Parts:", kino.PartsCount)
+	fmt.Println("PhotoID:", kino.PhotoID)
 
+	// 🎯 1 ta qism bo'lsa — rasm shart emas, to'g'ridan-to'g'ri faylni yuboramiz
+	if kino.PartsCount == 1 {
+		sendSingleKinoPart(bot, o, msg.Chat.ID, &kino)
+		return
+	}
+
+	// 🎯 Ko'p qismli bo'lsa — caption + tugmalar
 	caption := fmt.Sprintf(
 		"%s\n\nJami qismlar - %d",
 		kino.Name,
 		kino.PartsCount,
 	)
 
-	photo := tgbotapi.NewPhoto(
-		msg.Chat.ID,
-		tgbotapi.FileID(kino.PhotoID),
-	)
-	photo.Caption = caption
+	var keyboard tgbotapi.InlineKeyboardMarkup
+	hasKeyboard := false
 
 	if kino.PartsCount > 0 {
-		photo.ReplyMarkup = buildKinoPartsKeyboard(kino.Id, kino.PartsCount, 1)
+		keyboard = buildKinoPartsKeyboard(kino.Id, kino.PartsCount, 1)
+		hasKeyboard = true
 	} else {
-		photo.Caption += "\n⚠️ Tez orada qismlar joylanadi!"
+		caption += "\n⚠️ Tez orada qismlar joylanadi!"
 	}
 
-	_, sendErr := bot.Send(photo)
-	if sendErr != nil {
-		fmt.Println("SEND PHOTO ERROR:", sendErr)
+	var sendErr error
+
+	// 🎯 PhotoID borligiga qarab qaror qilamiz
+	if kino.PhotoID != "" {
+		photo := tgbotapi.NewPhoto(msg.Chat.ID, tgbotapi.FileID(kino.PhotoID))
+		photo.Caption = caption
+		if hasKeyboard {
+			photo.ReplyMarkup = keyboard
+		}
+		_, sendErr = bot.Send(photo)
+
+		if sendErr != nil {
+			fmt.Println("SEND PHOTO ERROR (fallback to text):", sendErr)
+			sendErr = sendKinoAsText(bot, msg.Chat.ID, caption, keyboard, hasKeyboard)
+		}
+	} else {
+		sendErr = sendKinoAsText(bot, msg.Chat.ID, caption, keyboard, hasKeyboard)
 	}
+
+	if sendErr != nil {
+		fmt.Println("SEND KINO ERROR:", sendErr)
+		fallback := tgbotapi.NewMessage(msg.Chat.ID, "❌ Kechirasiz, ma'lumotni yuborishda texnik xatolik yuz berdi. Iltimos, keyinroq qayta urinib ko'ring yoki admin bilan bog'laning.")
+		if _, fbErr := bot.Send(fallback); fbErr != nil {
+			fmt.Println("SEND FALLBACK MESSAGE ERROR:", fbErr)
+		}
+	}
+}
+
+// sendSingleKinoPart — faqat 1 qismli kinoni to'g'ridan-to'g'ri (video/rasm/hujjat) yuboradi
+func sendSingleKinoPart(bot *tgbotapi.BotAPI, o orm.Ormer, chatID int64, kino *models.Kino) {
+	var part models.KinoPart
+	err := o.QueryTable(new(models.KinoPart)).
+		Filter("Kino__Id", kino.Id).
+		Filter("PartOrder", 1).
+		One(&part)
+
+	if err != nil {
+		fmt.Println("SINGLE KINO PART NOT FOUND:", err)
+		fallback := tgbotapi.NewMessage(chatID, "❌ Fayl topilmadi. Iltimos, admin bilan bog'laning.")
+		bot.Send(fallback)
+		return
+	}
+
+	caption := kino.Name
+
+	var sendErr error
+
+	switch part.Kind {
+	case "video":
+		video := tgbotapi.NewVideo(chatID, tgbotapi.FileID(part.FileID))
+		video.Caption = caption
+		video.ParseMode = "Markdown"
+		_, sendErr = bot.Send(video)
+
+	case "document":
+		doc := tgbotapi.NewDocument(chatID, tgbotapi.FileID(part.FileID))
+		doc.Caption = caption
+		doc.ParseMode = "Markdown"
+		_, sendErr = bot.Send(doc)
+
+	case "photo":
+		photo := tgbotapi.NewPhoto(chatID, tgbotapi.FileID(part.FileID))
+		photo.Caption = caption
+		photo.ParseMode = "Markdown"
+		_, sendErr = bot.Send(photo)
+
+	default:
+		sendErr = fmt.Errorf("noma'lum fayl turi: %s", part.Kind)
+	}
+
+	if sendErr != nil {
+		fmt.Println("SEND SINGLE KINO PART ERROR:", sendErr)
+		fallback := tgbotapi.NewMessage(chatID, "❌ Faylni yuborishda texnik xatolik yuz berdi.")
+		bot.Send(fallback)
+	}
+}
+
+// sendKinoAsText — rasm bo'lmagan kinolar uchun oddiy matn xabar yuboradi
+func sendKinoAsText(bot *tgbotapi.BotAPI, chatID int64, caption string, keyboard tgbotapi.InlineKeyboardMarkup, hasKeyboard bool) error {
+	text := tgbotapi.NewMessage(chatID, caption)
+	if hasKeyboard {
+		text.ReplyMarkup = keyboard
+	}
+	_, err := bot.Send(text)
+	return err
 }
 
 // ==================== INLINE KLAVIATURA (QISMLAR) ====================
@@ -865,12 +1075,6 @@ func RouteKinoEditState(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgbotap
 
 	return false
 }
-
-// ==================== KINO YUKLASH (YANGI KINO QO'SHISH) ====================
-// Eslatma: StartKinoUpload va RouteKinoUploadState funksiyalari sizning
-// StartAnimeUpload / RouteAnimeUploadState funksiyalaringizga mos ravishda
-// yozilishi kerak. O'sha ikki funksiyaning to'liq kodini yuborsangiz,
-// men ularni ham aynan shu faylga Kino versiyasida qo'shib beraman.
 
 // ==================== STATISTIKA (KINO) ====================
 

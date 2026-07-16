@@ -12,8 +12,12 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
-var adminState = map[int64]string{}
-var adminTempChannel = map[int64]int64{}
+var (
+	adminState       = make(map[int64]string)
+	adminTempChannel = make(map[int64]int64)
+	quickAnimeTemp   = make(map[int64]string) // 🎯 shu qatorni qo'shing
+	quickKinoTemp    = make(map[int64]string)
+)
 
 func parseChannelID(bot *tgbotapi.BotAPI, msg *tgbotapi.Message) (int64, error) {
 	if msg.ForwardFromChat != nil {

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/beego/beego/v2/client/orm"
 	"log"
+	"math/rand"
 	"strconv"
 	"strings"
 	"time"
@@ -45,6 +46,7 @@ func HandleAnimeBotMessage(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgbo
 			msg.Text == "📋 VIP ro'yxati" ||
 			msg.Text == "⬅️ Orqaga" ||
 			msg.Text == "/delanime" ||
+			msg.Text == "🎬 qismli anime joylash" ||
 			msg.Text == "/editanime"
 
 	if isNewCommand && msg.Text != "/ok" && isAdmin(b, userID) {
@@ -54,20 +56,32 @@ func HandleAnimeBotMessage(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgbo
 		delete(adminTempChannel, userID)
 		mu.Unlock()
 	}
+
 	if isAdmin(b, userID) {
-		// 🎯 AGAR ADMIN DAVOMLI STATE ICHIDA BO'LSA
 		mu.Lock()
 		state, exists := adminState[userID]
 		mu.Unlock()
 
 		if exists {
-			// 1. Anime yuklash holatlari bo'lsa
 			if RouteAnimeUploadState(bot, b, msg, state) {
 				return
 			}
 
-			// 2. Anime tahrirlash (Edit) holatlari bo'lsa
 			if RouteAnimeEditState(bot, b, msg, state) {
+				return
+			}
+
+			// 🎯 Yangi qator shu yerga, "state" mavjud bo'lgan joyga qo'shiladi:
+			if RouteQuickAnimeState(bot, b, msg, state) {
+				return
+			}
+
+			if RouteUserManagementState(bot, b, msg, state) {
+				return
+			}
+
+			if state == "wait_channel" || state == "wait_link" {
+				HandleAdminCommands(bot, b, msg)
 				return
 			}
 
@@ -93,10 +107,7 @@ func HandleAnimeBotMessage(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgbo
 				return
 			}
 		}
-		// --- ADMIN QO'SHISH ---
-		// --- ADMIN QO'SHISH ---
 
-		// Adminning asosiy menyu buyruqlari
 		switch msg.Text {
 		case "/admin":
 			showAdminPanel(bot, chatID)
@@ -104,6 +115,10 @@ func HandleAnimeBotMessage(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgbo
 
 		case "➕ Anime joylash", "/addanime":
 			StartAnimeUpload(bot, b, msg)
+			return
+
+		case "🎬 qismli anime joylash":
+			StartQuickAnimeUpload(bot, b, msg)
 			return
 
 		case "➕ Kanal qo‘shish", "/addchannel":
@@ -246,6 +261,129 @@ func HandleAnimeBotMessage(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgbo
 	}
 }
 
+func StartQuickAnimeUpload(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgbotapi.Message) {
+	userID := msg.From.ID
+	chatID := msg.Chat.ID
+
+	mu.Lock()
+	adminState[userID] = "waiting_quick_name"
+	mu.Unlock()
+
+	sendUserBot(bot, chatID, "Anime haqida malumot yozib yuboring:")
+}
+
+func RouteQuickAnimeState(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgbotapi.Message, state string) bool {
+	userID := msg.From.ID
+	chatID := msg.Chat.ID
+
+	if state == "waiting_quick_name" {
+		name := strings.TrimSpace(msg.Text)
+		if name == "" {
+			sendUserBot(bot, chatID, "❌ Iltimos, nomni matn ko'rinishida yuboring:")
+			return true
+		}
+
+		mu.Lock()
+		quickAnimeTemp[userID] = name
+		adminState[userID] = "waiting_quick_file"
+		mu.Unlock()
+
+		sendUserBot(bot, chatID, "📎 Endi shu anime uchun video, rasm yoki hujjat yuboring:")
+		return true
+	}
+
+	if state == "waiting_quick_file" {
+		var fileID, kind, photoID, coverKind string
+
+		if msg.Video != nil {
+			fileID = msg.Video.FileID
+			kind = "video"
+			coverKind = "" // 🎯 videoning coverini alohida rasm sifatida yubora olmaymiz, shuning uchun bo'sh qoldiramiz
+		} else if msg.Document != nil {
+			fileID = msg.Document.FileID
+			kind = "document"
+			coverKind = ""
+		} else if msg.Photo != nil && len(msg.Photo) > 0 {
+			fileID = msg.Photo[len(msg.Photo)-1].FileID
+			kind = "photo"
+			photoID = fileID
+			coverKind = "photo"
+		} else {
+			sendUserBot(bot, chatID, "❌ Iltimos, faqat video, rasm yoki hujjat yuboring:")
+			return true
+		}
+
+		mu.Lock()
+		name := quickAnimeTemp[userID]
+		delete(quickAnimeTemp, userID)
+		delete(adminState, userID)
+		mu.Unlock()
+
+		o := orm.NewOrm()
+
+		var code string
+		for {
+			code = generateRandomCode(8)
+			exist := o.QueryTable(new(models.Anime)).
+				Filter("Bot__Id", b.Id).
+				Filter("Code", code).
+				Exist()
+			if !exist {
+				break
+			}
+		}
+
+		anime := models.Anime{
+			Bot:        b,
+			Name:       name,
+			Code:       code,
+			PhotoID:    photoID,
+			CoverKind:  coverKind, // 🎯
+			PartsCount: 1,
+		}
+
+		if _, err := o.Insert(&anime); err != nil {
+			log.Printf("Tez joylashda anime yaratishda xatolik: %v", err)
+			sendUserBot(bot, chatID, "❌ Anime yaratishda xatolik yuz berdi.")
+			return true
+		}
+
+		part := models.AnimePart{
+			Anime:     &anime,
+			PartOrder: 1,
+			FileID:    fileID,
+			Kind:      kind,
+		}
+		if _, err := o.Insert(&part); err != nil {
+			log.Printf("Tez joylashda qism qo'shishda xatolik: %v", err)
+		}
+
+		link := fmt.Sprintf("https://t.me/%s?start=%s", bot.Self.UserName, code)
+
+		text := fmt.Sprintf(
+			"✅ *Anime muvaffaqiyatli joylandi!*\n\n📌 Nomi: %s\n🎬 Qismlar: 1\n🔗 Havola: `%s`",
+			name, link,
+		)
+		reply := tgbotapi.NewMessage(chatID, text)
+		reply.ParseMode = "Markdown"
+		bot.Send(reply)
+
+		showAdminPanel(bot, chatID)
+		return true
+	}
+
+	return false
+}
+
+func generateRandomCode(n int) string {
+	const letters = "abcdefghijklmnopqrstuvwxyz"
+	b := make([]byte, n)
+	for i := range b {
+		b[i] = letters[rand.Intn(len(letters))]
+	}
+	return string(b)
+}
+
 func showAdminPanel(bot *tgbotapi.BotAPI, chatID int64) {
 	keyboard := tgbotapi.NewReplyKeyboard(
 		tgbotapi.NewKeyboardButtonRow(
@@ -266,6 +404,7 @@ func showAdminPanel(bot *tgbotapi.BotAPI, chatID int64) {
 		),
 		tgbotapi.NewKeyboardButtonRow(
 			tgbotapi.NewKeyboardButton("👤 Adminlar"),
+			tgbotapi.NewKeyboardButton("🎬 qismli anime joylash"),
 		),
 	)
 
@@ -376,10 +515,12 @@ func handleAnimeByCode(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgbotapi
 		fmt.Println("ANIME NOT FOUND:", err)
 
 		text := "🔍 Afsuski, bunday kodli anime topilmadi...\n\n"
+		reply := tgbotapi.NewMessage(msg.Chat.ID, text)
+		reply.ParseMode = "Markdown"
 
-		msg := tgbotapi.NewMessage(msg.Chat.ID, text)
-		msg.ParseMode = "Markdown"
-		bot.Send(msg)
+		if _, sendErr := bot.Send(reply); sendErr != nil {
+			fmt.Println("SEND NOT-FOUND MESSAGE ERROR:", sendErr)
+		}
 		return
 	}
 
@@ -388,31 +529,115 @@ func handleAnimeByCode(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgbotapi
 	fmt.Println("Name:", anime.Name)
 	fmt.Println("Code:", anime.Code)
 	fmt.Println("Parts:", anime.PartsCount)
+	fmt.Println("CoverKind:", anime.CoverKind)
+	fmt.Println("PhotoID:", anime.PhotoID)
 
+	// 🎯 1 ta qism bo'lsa — rasm shart emas, to'g'ridan-to'g'ri faylni yuboramiz
+	if anime.PartsCount == 1 {
+		sendSinglePartAnime(bot, o, msg.Chat.ID, &anime)
+		return
+	}
+
+	// 🎯 Ko'p qismli bo'lsa — caption + tugmalar, va PhotoID bo'lsa albatta rasm bilan
 	caption := fmt.Sprintf(
 		"%s\n\nJami qismlar - %d",
 		anime.Name,
 		anime.PartsCount,
 	)
 
-	photo := tgbotapi.NewPhoto(
-		msg.Chat.ID,
-		tgbotapi.FileID(anime.PhotoID),
-	)
-	photo.Caption = caption
+	var keyboard tgbotapi.InlineKeyboardMarkup
+	hasKeyboard := false
 
-	// FIX: Faqat qismlar soni 0 dan katta bo'lsagina klaviatura qo'shamiz
 	if anime.PartsCount > 0 {
-		photo.ReplyMarkup = buildAnimePartsKeyboard(anime.Id, anime.PartsCount, 1)
+		keyboard = buildAnimePartsKeyboard(anime.Id, anime.PartsCount, 1)
+		hasKeyboard = true
 	} else {
-		// Qismlar yo'qligi haqida ogohlantirish matni qo'shish ham mumkin
-		photo.Caption += "\n⚠️ Tez orada qismlar joylanadi!"
+		caption += "\n⚠️ Tez orada qismlar joylanadi!"
 	}
 
-	_, sendErr := bot.Send(photo)
-	if sendErr != nil {
-		fmt.Println("SEND PHOTO ERROR:", sendErr)
+	var sendErr error
+
+	// 🎯 CoverKind emas, PhotoID borligiga qarab qaror qilamiz
+	if anime.PhotoID != "" {
+		photo := tgbotapi.NewPhoto(msg.Chat.ID, tgbotapi.FileID(anime.PhotoID))
+		photo.Caption = caption
+		if hasKeyboard {
+			photo.ReplyMarkup = keyboard
+		}
+		_, sendErr = bot.Send(photo)
+
+		if sendErr != nil {
+			fmt.Println("SEND PHOTO ERROR (fallback to text):", sendErr)
+			sendErr = sendAnimeAsText(bot, msg.Chat.ID, caption, keyboard, hasKeyboard)
+		}
+	} else {
+		sendErr = sendAnimeAsText(bot, msg.Chat.ID, caption, keyboard, hasKeyboard)
 	}
+
+	if sendErr != nil {
+		fmt.Println("SEND ANIME ERROR:", sendErr)
+		fallback := tgbotapi.NewMessage(msg.Chat.ID, "❌ Kechirasiz, ma'lumotni yuborishda texnik xatolik yuz berdi. Iltimos, keyinroq qayta urinib ko'ring yoki admin bilan bog'laning.")
+		if _, fbErr := bot.Send(fallback); fbErr != nil {
+			fmt.Println("SEND FALLBACK MESSAGE ERROR:", fbErr)
+		}
+	}
+}
+
+func sendSinglePartAnime(bot *tgbotapi.BotAPI, o orm.Ormer, chatID int64, anime *models.Anime) {
+	var part models.AnimePart
+	err := o.QueryTable(new(models.AnimePart)).
+		Filter("Anime__Id", anime.Id).
+		Filter("PartOrder", 1).
+		One(&part)
+
+	if err != nil {
+		fmt.Println("SINGLE PART NOT FOUND:", err)
+		fallback := tgbotapi.NewMessage(chatID, "❌ Fayl topilmadi. Iltimos, admin bilan bog'laning.")
+		bot.Send(fallback)
+		return
+	}
+
+	caption := anime.Name
+
+	var sendErr error
+
+	switch part.Kind {
+	case "video":
+		video := tgbotapi.NewVideo(chatID, tgbotapi.FileID(part.FileID))
+		video.Caption = caption
+		video.ParseMode = "Markdown"
+		_, sendErr = bot.Send(video)
+
+	case "document":
+		doc := tgbotapi.NewDocument(chatID, tgbotapi.FileID(part.FileID))
+		doc.Caption = caption
+		doc.ParseMode = "Markdown"
+		_, sendErr = bot.Send(doc)
+
+	case "photo":
+		photo := tgbotapi.NewPhoto(chatID, tgbotapi.FileID(part.FileID))
+		photo.Caption = caption
+		photo.ParseMode = "Markdown"
+		_, sendErr = bot.Send(photo)
+
+	default:
+		sendErr = fmt.Errorf("noma'lum fayl turi: %s", part.Kind)
+	}
+
+	if sendErr != nil {
+		fmt.Println("SEND SINGLE PART ERROR:", sendErr)
+		fallback := tgbotapi.NewMessage(chatID, "❌ Faylni yuborishda texnik xatolik yuz berdi.")
+		bot.Send(fallback)
+	}
+}
+
+func sendAnimeAsText(bot *tgbotapi.BotAPI, chatID int64, caption string, keyboard tgbotapi.InlineKeyboardMarkup, hasKeyboard bool) error {
+	text := tgbotapi.NewMessage(chatID, caption)
+	if hasKeyboard {
+		text.ReplyMarkup = keyboard
+	}
+	_, err := bot.Send(text)
+	return err
 }
 
 func buildAnimePartsKeyboard(animeID int64, totalParts int, page int) tgbotapi.InlineKeyboardMarkup {
@@ -661,7 +886,7 @@ func handleAnimePart(bot *tgbotapi.BotAPI, cb *tgbotapi.CallbackQuery) {
 	// 2. 🎯 Chiroyli matn tayyorlaymiz
 	captionText := fmt.Sprintf(
 		"%s\n"+
-			"%d-qism",
+			"qism - %d",
 		animePart.Anime.Name, // Anime nomi
 		animePart.PartOrder,  // Nechanchi qismligi
 	)

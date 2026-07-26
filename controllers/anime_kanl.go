@@ -146,7 +146,7 @@ func HandleAdminCommands(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgbota
 	}
 }
 
-func ShowMembership(bot *tgbotapi.BotAPI, b *models.CreatedBot, chatID int64) {
+func ShowMembership(bot *tgbotapi.BotAPI, b *models.CreatedBot, chatID int64, userID int64) {
 	o := orm.NewOrm()
 	var channels []models.BotChannel
 
@@ -159,41 +159,67 @@ func ShowMembership(bot *tgbotapi.BotAPI, b *models.CreatedBot, chatID int64) {
 		return
 	}
 
+	// 🎯 Faqat obuna bo'lmagan kanallarni ajratib olamiz
+	var notSubscribed []models.BotChannel
+	for _, ch := range channels {
+		member, err := bot.GetChatMember(tgbotapi.GetChatMemberConfig{
+			ChatConfigWithUser: tgbotapi.ChatConfigWithUser{
+				ChatID: ch.ChannelID,
+				UserID: userID,
+			},
+		})
+
+		if err == nil && (member.Status == "member" || member.Status == "administrator" || member.Status == "creator") {
+			continue // A'zo bo'lsa, ro'yxatga qo'shmaymiz
+		}
+
+		hasRequest := o.QueryTable(new(models.BotJoinRequest)).
+			Filter("Bot__Id", b.Id).
+			Filter("TgId", userID).
+			Filter("ChannelID", ch.ChannelID).
+			Exist()
+
+		if hasRequest {
+			continue // Zayavka tashlagan bo'lsa ham qo'shmaymiz
+		}
+
+		notSubscribed = append(notSubscribed, ch)
+	}
+
+	// Agar hammasiga obuna bo'lgan bo'lsa — ko'rsatishga hojat yo'q
+	if len(notSubscribed) == 0 {
+		return
+	}
+
 	text := "🚨 Botdan foydalanish uchun quyidagi kanallarga obuna bo‘ling:\n\n"
 
-	// 1. Standart [][]tgbotapi.InlineKeyboardButton o'rniga maxsus RangliTugma massivi
 	var rows [][]RangliTugma
 
-	for _, ch := range channels {
-		// Obuna bo'lish tugmasi - Ko'k rangli (primary)
+	for _, ch := range notSubscribed {
 		obunaTugma := RangliTugma{
 			Text:              "OBUNA BO'LISH",
-			URL:               ch.InviteLink, // Havola ochishi uchun URL beramiz
-			Style:             "primary",     // Ko'k rangli uslub
+			URL:               ch.InviteLink,
+			Style:             "primary",
 			IconCustomEmojiID: "5471888897468310486",
 		}
 		rows = append(rows, []RangliTugma{obunaTugma})
 	}
 
-	// Tekshirish tugmasi - Yashil rangli (success)
 	checkBtn := RangliTugma{
 		Text:              "✅ Tekshirish",
 		CallbackData:      fmt.Sprintf("check_sub_%d", b.Id),
-		Style:             "success", // UI tizimlarida yashil rang "success" bo'ladi
+		Style:             "success",
 		IconCustomEmojiID: "5460960662421257616",
 	}
 	rows = append(rows, []RangliTugma{checkBtn})
 
-	// 2. Maxsus rangli klaviaturani yaratamiz
 	keyboard := RangliKlaviatura{
 		InlineKeyboard: rows,
 	}
 
-	// 3. Xabarni standart NewMessage orqali tayyorlaymiz
 	msg := tgbotapi.NewMessage(chatID, text)
-	msg.ReplyMarkup = keyboard // Rangli klaviaturani yuklaymiz
+	msg.ReplyMarkup = keyboard
 
-	// 4. Xabarni yuboramiz
 	_, err = bot.Send(msg)
 	if err != nil {
 		log.Printf("Obuna xabarini yuborishda xatolik: %v", err)

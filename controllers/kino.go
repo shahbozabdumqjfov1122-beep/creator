@@ -225,7 +225,7 @@ func HandleKinoBotMessage(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgbot
 	}
 
 	if !botUser.IsVip && !CheckSubscription(bot, b, userID) {
-		ShowMembership(bot, b, chatID)
+		ShowMembership(bot, b, chatID, userID) // ✅ yangi — userID qo'shildi
 		return
 	}
 	if strings.HasPrefix(msg.Text, "/start") {

@@ -62,6 +62,7 @@ func HandleAnimeBotMessage(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgbo
 		state, exists := adminState[userID]
 		mu.Unlock()
 
+		// 🎯 Barcha state-routerlar bitta joyda, dublikatlarsiz, tartib bilan tekshiriladi
 		if exists {
 			if RouteAnimeUploadState(bot, b, msg, state) {
 				return
@@ -71,7 +72,6 @@ func HandleAnimeBotMessage(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgbo
 				return
 			}
 
-			// 🎯 Yangi qator shu yerga, "state" mavjud bo'lgan joyga qo'shiladi:
 			if RouteQuickAnimeState(bot, b, msg, state) {
 				return
 			}
@@ -85,17 +85,6 @@ func HandleAnimeBotMessage(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgbo
 				return
 			}
 
-			// 🎯 3. Foydalanuvchini boshqarish (VIP/Blok) holatlari bo'lsa
-			if RouteUserManagementState(bot, b, msg, state) {
-				return
-			}
-
-			// 4. Agar admin kanal qo'shish holatida bo'lsa
-			if state == "wait_channel" || state == "wait_link" {
-				HandleAdminCommands(bot, b, msg)
-				return
-			}
-			// 5. Reklama yuborish holati bo'lsa
 			if strings.HasPrefix(state, "waiting_broadcast_message:") {
 				target := strings.TrimPrefix(state, "waiting_broadcast_message:")
 
@@ -217,6 +206,7 @@ func HandleAnimeBotMessage(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgbo
 		case "📋 Adminlar ro'yxati":
 			showAdminsList(bot, b, chatID)
 			return
+
 		case "/ok":
 			sendUserBot(bot, chatID, "💡 Hozirda faol yuklash jarayoni mavjud emas.")
 			return
@@ -230,7 +220,10 @@ func HandleAnimeBotMessage(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgbo
 				sendUserBot(bot, chatID, "/admin")
 				return
 			}
+			// 🎯 FIX: return qo'shildi — aks holda kod pastga tushib,
+			// handleAnimeByCode ikkinchi marta chaqirilib, xabar duplikat yuborilardi
 			handleAnimeByCode(bot, b, msg, msg.Text)
+			return
 		}
 	}
 
@@ -258,6 +251,7 @@ func HandleAnimeBotMessage(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgbo
 		}
 		// Anime kodi orqali qidirish
 		handleAnimeByCode(bot, b, msg, msg.Text)
+		return
 	}
 }
 

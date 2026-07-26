@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"fmt"
+	"log"
 	"strconv"
 	"strings"
 	"time"
@@ -159,19 +160,44 @@ func ShowMembership(bot *tgbotapi.BotAPI, b *models.CreatedBot, chatID int64) {
 	}
 
 	text := "🚨 Botdan foydalanish uchun quyidagi kanallarga obuna bo‘ling:\n\n"
-	var rows [][]tgbotapi.InlineKeyboardButton
+
+	// 1. Standart [][]tgbotapi.InlineKeyboardButton o'rniga maxsus RangliTugma massivi
+	var rows [][]RangliTugma
 
 	for _, ch := range channels {
-		btn := tgbotapi.NewInlineKeyboardButtonURL("OBUNA BOLISH", ch.InviteLink)
-		rows = append(rows, tgbotapi.NewInlineKeyboardRow(btn))
+		// Obuna bo'lish tugmasi - Ko'k rangli (primary)
+		obunaTugma := RangliTugma{
+			Text:              "OBUNA BO'LISH",
+			URL:               ch.InviteLink, // Havola ochishi uchun URL beramiz
+			Style:             "primary",     // Ko'k rangli uslub
+			IconCustomEmojiID: "5471888897468310486",
+		}
+		rows = append(rows, []RangliTugma{obunaTugma})
 	}
 
-	checkBtn := tgbotapi.NewInlineKeyboardButtonData("✅ Tekshirish", fmt.Sprintf("check_sub_%d", b.Id))
-	rows = append(rows, tgbotapi.NewInlineKeyboardRow(checkBtn))
+	// Tekshirish tugmasi - Yashil rangli (success)
+	checkBtn := RangliTugma{
+		Text:              "✅ Tekshirish",
+		CallbackData:      fmt.Sprintf("check_sub_%d", b.Id),
+		Style:             "success", // UI tizimlarida yashil rang "success" bo'ladi
+		IconCustomEmojiID: "5460960662421257616",
+	}
+	rows = append(rows, []RangliTugma{checkBtn})
 
+	// 2. Maxsus rangli klaviaturani yaratamiz
+	keyboard := RangliKlaviatura{
+		InlineKeyboard: rows,
+	}
+
+	// 3. Xabarni standart NewMessage orqali tayyorlaymiz
 	msg := tgbotapi.NewMessage(chatID, text)
-	msg.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(rows...)
-	bot.Send(msg)
+	msg.ReplyMarkup = keyboard // Rangli klaviaturani yuklaymiz
+
+	// 4. Xabarni yuboramiz
+	_, err = bot.Send(msg)
+	if err != nil {
+		log.Printf("Obuna xabarini yuborishda xatolik: %v", err)
+	}
 }
 
 func CheckSubscription(bot *tgbotapi.BotAPI, b *models.CreatedBot, userID int64) bool {

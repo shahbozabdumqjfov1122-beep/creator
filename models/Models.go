@@ -101,18 +101,25 @@ func (p *AnimePart) TableName() string {
 }
 
 type BotUser struct {
-	Id        int64       `orm:"auto;pk"`
-	Bot       *CreatedBot `orm:"rel(fk);column(bot_id)"`
-	TgId      int64       `orm:"column(tg_id)"`
-	Username  string      `orm:"size(100);null"`
-	FirstName string      `orm:"size(200);column(first_name);null"`
-	LastName  string      `orm:"size(200);column(last_name);null"`
-	IsVip     bool        `orm:"default(false)"`
-	IsAdmin   bool        `orm:"default(false);column(is_admin)"`
-	IsBlocked bool        `orm:"default(false)"`
-	JoinedAt  time.Time   `orm:"auto_now_add;type(datetime);column(joined_at)"`
-	Balance   float64     `orm:"digits(18);decimals(2)"`
-	UpdatedAt time.Time   `orm:"auto_now;type(datetime);column(updated_at)"`
+	Id                int64       `orm:"auto;pk"`
+	Bot               *CreatedBot `orm:"rel(fk);column(bot_id)"`
+	TgId              int64       `orm:"column(tg_id)"`
+	Username          string      `orm:"size(100);null"`
+	FirstName         string      `orm:"size(200);column(first_name);null"`
+	LastName          string      `orm:"size(200);column(last_name);null"`
+	IsVip             bool        `orm:"default(false)"`
+	IsAdmin           bool        `orm:"default(false);column(is_admin)"`
+	IsBlocked         bool        `orm:"default(false)"`
+	JoinedAt          time.Time   `orm:"auto_now_add;type(datetime);column(joined_at)"`
+	Balance           float64     `orm:"digits(18);decimals(2)"`
+	UpdatedAt         time.Time   `orm:"auto_now;type(datetime);column(updated_at)"`
+	CanUploadAnime    bool        `orm:"default(false)"`
+	CanEditAnime      bool        `orm:"default(false)"`
+	CanDeleteAnime    bool        `orm:"default(false)"`
+	CanManageChannels bool        `orm:"default(false)"`
+	CanBroadcast      bool        `orm:"default(false)"`
+	CanManageUsers    bool        `orm:"default(false)"`
+	CanViewStats      bool        `orm:"default(false)"`
 }
 
 func (b *BotUser) TableName() string {

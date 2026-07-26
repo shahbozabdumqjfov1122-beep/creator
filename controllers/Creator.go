@@ -81,7 +81,6 @@ func handleMessage(msg *tgbotapi.Message) {
 	switch {
 
 	case text == "/start":
-		sendWelcome(chatID)
 		sendMainMenu(chatID, int64(msg.From.ID))
 
 	case text == "/mybots":
@@ -165,33 +164,6 @@ func handleBroadcastMessage(adminChatID int64, msg *tgbotapi.Message) {
 ❌ Yuborilmadi: %d ta`, sentCount, failedCount)
 
 	send(adminChatID, report, nil)
-}
-
-func sendWelcome(chatID int64) {
-	keyboard := RangliKlaviatura{
-		InlineKeyboard: [][]RangliTugma{
-			{
-				{Text: "Bot yaratish", CallbackData: "create_bot", Style: "primary", IconCustomEmojiID: "5472353724598884612"},
-				{Text: "Mening botlarim", CallbackData: "my_bots", Style: "primary", IconCustomEmojiID: "5472098801109997416"},
-			},
-			{
-				{Text: "Balansni to'ldirish", CallbackData: "top_up_balance", Style: "primary", IconCustomEmojiID: "5472098698030781431"},
-				{Text: "Mening balansim", CallbackData: "my_balance", Style: "primary", IconCustomEmojiID: "5469891368308482853"}},
-			{
-				{Text: "WEB PANELGA O'TISH", URL: "http://67.211.211.44:8080", Style: "primary", IconCustomEmojiID: "5470101946260037454"}}},
-	}
-
-	fromChatID := int64(-1003705222257)
-	messageID := 2
-
-	copyMsg := tgbotapi.NewCopyMessage(chatID, fromChatID, messageID)
-
-	copyMsg.ReplyMarkup = keyboard
-
-	_, err := CreatorBot.Send(copyMsg)
-	if err != nil {
-		log.Printf("Xabarni ko'chirishda xatolik: %v", err)
-	}
 }
 
 func handleMyBalance(chatID int64, userID int64) {

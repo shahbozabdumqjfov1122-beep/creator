@@ -23,7 +23,7 @@ func HandleKinoBotMessage(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgbot
 	}
 	isNewCommand :=
 		msg.Text == "/admin" ||
-			msg.Text == "🎬 Tez joylash" ||
+			msg.Text == "🎬 Qismli kino joylash" ||
 			msg.Text == "/addkino" ||
 			msg.Text == "/addchannel" ||
 			msg.Text == "/delchannel" ||
@@ -106,7 +106,7 @@ func HandleKinoBotMessage(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgbot
 		case "➕ Kino joylash", "/addkino":
 			StartKinoUpload(bot, b, msg)
 			return
-		case "🎬 Tez joylash": // 🎯 yangi
+		case "🎬 Qismli kino joylash": // 🎯 yangi
 			StartKinoQuickUpload(bot, b, msg)
 			return
 		case "➕ Kanal qo‘shish", "/addchannel":
@@ -220,6 +220,7 @@ func HandleKinoBotMessage(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgbot
 				return
 			}
 			handleKinoByCode(bot, b, msg, msg.Text)
+			return
 		}
 	}
 
@@ -259,7 +260,7 @@ func showKinoAdminPanel(bot *tgbotapi.BotAPI, chatID int64) {
 		),
 		tgbotapi.NewKeyboardButtonRow(
 			tgbotapi.NewKeyboardButton("➕ Kino joylash"),
-			tgbotapi.NewKeyboardButton("🎬 Tez joylash"), // 🎯 yangi tugma
+			tgbotapi.NewKeyboardButton("🎬 Qismli kino joylash"), // 🎯 yangi tugma
 		),
 		tgbotapi.NewKeyboardButtonRow(
 			tgbotapi.NewKeyboardButton("🗑 Kinoni o‘chirish"),

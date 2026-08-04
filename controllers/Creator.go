@@ -37,8 +37,9 @@ var HardcodedBotTypes = []struct {
 	Name string
 	Code string
 }{
-	{Name: "Anime Bot", Code: "anime"},
 	{Name: "Kino Bot", Code: "kino"},
+	{Name: "Anime Bot", Code: "anime"},
+	{Name: "Anime Pro Bot", Code: "animepro"},
 }
 
 func InitCreatorBot(token string) error {
@@ -237,7 +238,7 @@ func sendMainMenu(chatID int64, userID int64) {
 	if userID == AdminChatID {
 		keyboard.InlineKeyboard = append(keyboard.InlineKeyboard, []RangliTugma{
 			{
-				Text:              "📢 Ommaviy xabar yuborish",
+				Text:              "Ommaviy xabar yuborish",
 				CallbackData:      "broadcast",
 				Style:             "danger",
 				IconCustomEmojiID: "5472400022500190000",
@@ -417,7 +418,7 @@ func sendBotTypeSelection(chatID int64) {
 			Text:              t.Name,
 			CallbackData:      "type_" + t.Code, // Loglaringizga mos ravishda "create_" qoldirdik
 			Style:             "primary",        // Ko'k rangli uslub
-			IconCustomEmojiID: "5472355068923648569",
+			IconCustomEmojiID: "5307756958474845388",
 		}
 
 		rows = append(rows, []RangliTugma{tugma})
@@ -575,6 +576,14 @@ func handleTokenInput(chatID int64, userTgID int64, token string) {
 }
 
 const DailyPriceDisplay = 1500.0
+const DailyPriceAnimePro = 3000.0
+
+func dailyPriceForBotType(code string) float64 {
+	if code == "animepro" {
+		return DailyPriceAnimePro
+	}
+	return DailyPriceDisplay
+}
 
 func sendMyBots(chatID int64, userTgID int64) {
 	o := orm.NewOrm()
@@ -598,14 +607,29 @@ func sendMyBots(chatID int64, userTgID int64) {
 		return
 	}
 
+	// Egasining barcha faol botlari uchun umumiy kunlik xarajatni hisoblaymiz
+	// (har bir bot turi o'zining kunlik narxiga ega bo'lishi mumkin).
+	var totalDailyCost float64
+	for _, bb := range bots {
+		typeCode := ""
+		if bb.BotType != nil {
+			typeCode = bb.BotType.Code
+		}
+		totalDailyCost += dailyPriceForBotType(typeCode)
+	}
+
 	header := fmt.Sprintf("Sizning botlaringiz (%d ta):\n\nUmumiy balans: %.0f so'm\n", len(bots), owner.Balance)
 	send(chatID, header, nil)
 
 	for i, b := range bots {
 		botTypeName := "Noma'lum"
+		typeCode := ""
 		if b.BotType != nil {
 			botTypeName = b.BotType.Name
+			typeCode = b.BotType.Code
 		}
+
+		dailyPrice := dailyPriceForBotType(typeCode)
 
 		totalCount, _ := o.QueryTable("bot_user").Filter("Bot__Id", b.Id).Count()
 		vipCount, _ := o.QueryTable("bot_user").Filter("Bot__Id", b.Id).Filter("IsVip", true).Count()
@@ -624,9 +648,9 @@ func sendMyBots(chatID int64, userTgID int64) {
 		case !services.IsBotRunning(b.Id):
 			statusLine = "🔴 Process ishlamayapti (qayta urinib ko'ring)"
 		default:
-			// Ishlayotgan bot uchun qolgan vaqt
-			if owner.Balance > 0 {
-				daysLeft := owner.Balance / (DailyPriceDisplay * float64(len(bots))) // oddiy hisob
+			// Ishlayotgan bot uchun qolgan vaqt — umumiy kunlik xarajat asosida
+			if owner.Balance > 0 && totalDailyCost > 0 {
+				daysLeft := owner.Balance / totalDailyCost
 				if daysLeft >= 1 {
 					statusLine = fmt.Sprintf("✅ Ishlamoqda — taxminan %.0f kun", daysLeft)
 				} else {
@@ -639,8 +663,8 @@ func sendMyBots(chatID int64, userTgID int64) {
 		}
 
 		text := fmt.Sprintf(
-			"%d. @%s\n   Turi: %s\n   %s\n   Jami: %d | VIP: %d | Blok: %d",
-			i+1, b.BotUsername, botTypeName, statusLine, totalCount, vipCount, blockedCount,
+			"%d. @%s\n   Turi: %s\n   Kunlik narx: %.0f so'm\n   %s\n   Jami: %d | VIP: %d | Blok: %d",
+			i+1, b.BotUsername, botTypeName, dailyPrice, statusLine, totalCount, vipCount, blockedCount,
 		)
 
 		var keyboard RangliKlaviatura

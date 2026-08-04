@@ -34,6 +34,8 @@ type CreatedBot struct {
 	TrialEndsAt        time.Time `orm:"type(datetime);null;column(trial_ends_at)"`   // Trial tugash vaqti
 	PaidUntil          time.Time `orm:"type(datetime);null;column(paid_until)"`      // To'lov qilingan sana
 	CreatedAt          time.Time `orm:"auto_now_add;type(datetime);column(created_at)"`
+	Note               string    `orm:"type(text);null;column(note)"`       // 🎯 yangi: bot darajasidagi umumiy matn
+	VipPrices          string    `orm:"type(text);null;column(vip_prices)"` // 🎯 YANGI: Admin belgilaydigan VIP narxlar
 	UpdatedAt          time.Time `orm:"auto_now;type(datetime);column(updated_at)"`
 }
 
@@ -74,9 +76,10 @@ type Anime struct {
 	Bot        *CreatedBot `orm:"rel(fk);column(bot_id)"`
 	Name       string      `orm:"size(300)"`
 	Code       string      `orm:"size(100)"`
-	CoverKind  string      `orm:"size(20);default(photo);column(cover_kind)"` // 🎯 yangi: "photo", "video", "document" yoki "" (yo'q)
+	CoverKind  string      `orm:"size(20);default(photo);column(cover_kind)"`
 	PhotoID    string      `orm:"size(500);column(photo_id)"`
 	PartsCount int         `orm:"default(0);column(parts_count)"`
+	Note       string      `orm:"type(text);null;column(note)"` // 🎯 yangi: admin yozadigan doimiy matn/izoh
 	IsActive   bool        `orm:"default(true);column(is_active)"`
 	CreatedAt  time.Time   `orm:"auto_now_add;type(datetime);column(created_at)"`
 	UpdatedAt  time.Time   `orm:"auto_now;type(datetime);column(updated_at)"`
@@ -162,6 +165,7 @@ type Kino struct {
 	CreatedAt  time.Time   `orm:"auto_now_add;type(datetime);column(created_at)"`
 	UpdatedAt  time.Time   `orm:"auto_now;type(datetime);column(updated_at)"`
 }
+
 type KinoPart struct {
 	Id        int64     `orm:"auto;pk"`
 	Kino      *Kino     `orm:"rel(fk);column(kino_id)"`
@@ -187,12 +191,33 @@ type Admin struct {
 	CreatedAt time.Time `orm:"auto_now_add;type(datetime)"`
 	UpdatedAt time.Time `orm:"auto_now;type(datetime)"`
 }
+
 type BotStat struct {
 	Id        int64       `orm:"pk;auto"`
 	Bot       *CreatedBot `orm:"rel(fk)"`
 	UserID    int64
 	Action    string // "download", "success", "fail"
 	CreatedAt time.Time
+}
+type CardTopUp struct {
+	Id              int64     `orm:"auto;pk"`
+	User            *UserBot  `orm:"rel(fk);column(user_id)"`
+	RequestedAmount int64     `orm:"column(requested_amount)"`     // foydalanuvchi so'ragan summa
+	UniqueAmount    int64     `orm:"column(unique_amount);unique"` // +tasodifiy qo'shimcha bilan
+	Status          string    `orm:"size(20);default(pending)"`    // pending, confirmed, expired
+	CreatedAt       time.Time `orm:"auto_now_add;type(datetime)"`
+	ExpiresAt       time.Time `orm:"type(datetime)"`
+	ConfirmedAt     time.Time `orm:"type(datetime);null"`
+}
+type PromoChannel struct {
+	Id        int64       `orm:"auto;pk"`
+	Bot       *CreatedBot `orm:"rel(fk);column(bot_id)"`
+	ChannelID int64       `orm:"column(channel_id)"`
+	UserName  string      `orm:"size(200);null;column(username)"`
+	Title     string      `orm:"size(300);null;column(title)"`
+	IsActive  bool        `orm:"default(true);column(is_active)"`
+	CreatedAt time.Time   `orm:"auto_now_add;type(datetime);column(created_at)"`
+	UpdatedAt time.Time   `orm:"auto_now;type(datetime);column(updated_at)"`
 }
 
 func init() {
@@ -210,5 +235,7 @@ func init() {
 		new(Kino),
 		new(KinoPart),
 		new(Admin),
+		new(CardTopUp),
+		new(PromoChannel),
 	)
 }

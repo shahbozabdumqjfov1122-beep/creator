@@ -235,7 +235,7 @@ func HandleAnimeVideosStep(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgbo
 		"photo":    "🖼 Rasm",
 	}[kind]
 
-	text := fmt.Sprintf("✅ **%d-qism** qabul qilindi!\nTur: %s\n\nDavom ettiring yoki **/ok** deb yozing.", draft.NextOrder-1, kindLabel)
+	text := fmt.Sprintf("✅ %d-qism qabul qilindi!\nTur: %s\n\nDavom ettiring yoki /ok deb yozing.", draft.NextOrder-1, kindLabel)
 
 	bot.Send(tgbotapi.NewMessage(chatID, text))
 }

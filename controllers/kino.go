@@ -225,7 +225,11 @@ func HandleKinoBotMessage(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgbot
 	}
 
 	if !botUser.IsVip && !CheckSubscription(bot, b, userID) {
-		ShowMembership(bot, b, chatID, userID) // ✅ yangi — userID qo'shildi
+		mu.Lock()
+		pendingSearch[userID] = msg.Text // 🎯 nima qidirgan bo'lsa saqlab qolamiz
+		mu.Unlock()
+
+		ShowMembership(bot, b, chatID, userID)
 		return
 	}
 	if strings.HasPrefix(msg.Text, "/start") {
@@ -1086,13 +1090,8 @@ func showKinoStatistics(bot *tgbotapi.BotAPI, b *models.CreatedBot, chatID int64
 		Filter("Bot__Id", b.Id).
 		Count()
 
-	// Qolgan statistik ko'rsatkichlar (foydalanuvchilar, VIP, blok, faollik)
-	// umumiy showStatistics funksiyasi bilan bir xil, shuning uchun shu yerda
-	// faqat "Jami kino" sonini almashtirib, qolganini umumiy funksiyaga
-	// topshirish mumkin. Hozircha mustaqil versiya sifatida qoldiramiz:
-
 	text := fmt.Sprintf(
-		"📊 *Bot Statistikasi*\n\n🎬 Jami kino: `%d`\n\n(Qolgan statistika uchun umumiy showStatistics chaqirilmoqda)\n",
+		"*Bot Statistikasi*\n\n Jami kino: `%d`\n\n(Qolgan statistika uchun umumiy showStatistics chaqirilmoqda)\n",
 		totalKino,
 	)
 
@@ -1100,7 +1099,5 @@ func showKinoStatistics(bot *tgbotapi.BotAPI, b *models.CreatedBot, chatID int64
 	msg.ParseMode = "Markdown"
 	bot.Send(msg)
 
-	// To'liq statistika (foydalanuvchilar, VIP, blok va h.k.) uchun
-	// umumiy showStatistics funksiyasini ham chaqiramiz:
 	showStatistics(bot, b, chatID)
 }

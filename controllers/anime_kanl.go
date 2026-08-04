@@ -18,6 +18,8 @@ var (
 	adminTempChannel = make(map[int64]int64)
 	quickAnimeTemp   = make(map[int64]string) // 🎯 shu qatorni qo'shing
 	quickKinoTemp    = make(map[int64]string)
+	pendingSearch    = make(map[int64]string) // 🎯 obuna kutilayotgan qidiruv kodi
+
 )
 
 func parseChannelID(bot *tgbotapi.BotAPI, msg *tgbotapi.Message) (int64, error) {
@@ -58,13 +60,19 @@ func parseChannelID(bot *tgbotapi.BotAPI, msg *tgbotapi.Message) (int64, error) 
 func HandleAdminCommands(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgbotapi.Message) {
 	userID := msg.From.ID
 
-	// 🎯 FIX: Endi ham /addchannel, ham "➕ Kanal qo‘shish" matni kelganda ishlaydi
 	if msg.Text == "/addchannel" || msg.Text == "➕ Kanal qo‘shish" {
 		mu.Lock()
 		adminState[userID] = "wait_channel"
 		mu.Unlock()
+		sendUserBot(bot, msg.Chat.ID, "📢 Kanal ID yoki @username yuboring...")
+		return
+	}
 
-		sendUserBot(bot, msg.Chat.ID, "📢 Kanal ID yoki @username yuboring.\nYoki kanaldan birorta xabarni **Forward (pereposlat)** qiling!\n\n⚠️ Bot kanalga admin bo‘lishi shart!")
+	if msg.Text == "/vipnarx" || msg.Text == "💎 vip narx qo'shish" {
+		mu.Lock()
+		adminState[userID] = "wait_vip_name"
+		mu.Unlock()
+		sendUserBot(bot, msg.Chat.ID, "tarif nomini yuboring.\nMasalan: 1 oylik obuna")
 		return
 	}
 
@@ -75,7 +83,6 @@ func HandleAdminCommands(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgbota
 	if !hasState {
 		return
 	}
-
 	switch state {
 	case "wait_channel":
 		channelID, err := parseChannelID(bot, msg)
@@ -92,9 +99,6 @@ func HandleAdminCommands(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgbota
 				sendUserBot(bot, msg.Chat.ID, "❌ Kanal topilmadi yoki bot u yerda admin emas! Jarayon bekor qilindi.")
 			}
 
-			// Adminga boshqadan urinishi uchun panelni qaytarib ko'rsatamiz
-			showAdminPanel(bot, msg.Chat.ID)
-			return
 		}
 
 		// Agar hammasi to'g'ri bo'lsa, keyingi qadamga o'tadi...
@@ -139,10 +143,111 @@ func HandleAdminCommands(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgbota
 		delete(adminState, userID)
 		delete(adminTempChannel, userID)
 		mu.Unlock()
+	case "wait_vip_name":
+		name := strings.TrimSpace(msg.Text)
+		if name == "" {
+			sendUserBot(bot, msg.Chat.ID, "❌ Nom bo'sh bo'lishi mumkin emas. Qaytadan yuboring.")
+			return
+		}
 
-		// Asosiy admin panelni qayta ko'rsatamiz
-		showAdminPanel(bot, msg.Chat.ID)
+		mu.Lock()
+		quickKinoTemp[userID] = name // 🎯 mavjud mapni qayta ishlatamiz
+		adminState[userID] = "wait_vip_price"
+		mu.Unlock()
+
+		sendUserBot(bot, msg.Chat.ID, "Endi shu tarif uchun narxni yuboring.\nMasalan: 15 000 so'm")
 		return
+
+	case "wait_vip_price":
+		price := strings.TrimSpace(msg.Text)
+		if price == "" {
+			sendUserBot(bot, msg.Chat.ID, "❌ Narx bo'sh bo'lishi mumkin emas. Qaytadan yuboring.")
+			return
+		}
+
+		mu.Lock()
+		name := quickKinoTemp[userID]
+		delete(quickKinoTemp, userID)
+		delete(adminState, userID)
+		mu.Unlock()
+
+		o := orm.NewOrm()
+		createdBot := models.CreatedBot{Id: b.Id}
+		if err := o.Read(&createdBot); err != nil {
+			sendUserBot(bot, msg.Chat.ID, "❌ Bot ma'lumotini o'qishda xato.")
+			return
+		}
+
+		newLine := fmt.Sprintf("💎 VIP Obuna Tariflari\n\n %s - %s\n", name, price)
+		createdBot.VipPrices += newLine
+
+		if _, err := o.Update(&createdBot, "VipPrices"); err != nil {
+			sendUserBot(bot, msg.Chat.ID, "❌ Saqlashda xato yuz berdi.")
+			return
+		}
+
+		sendUserBot(bot, msg.Chat.ID, fmt.Sprintf("✅ Qo'shildi:\n%s", newLine))
+		return
+	default:
+		if strings.HasPrefix(state, "wait_vip_edit_name:") {
+			idxStr := strings.TrimPrefix(state, "wait_vip_edit_name:")
+			idx, _ := strconv.Atoi(idxStr)
+
+			name := strings.TrimSpace(msg.Text)
+			if name == "" {
+				sendUserBot(bot, msg.Chat.ID, "❌ Nom bo'sh bo'lishi mumkin emas.")
+				return
+			}
+
+			mu.Lock()
+			quickKinoTemp[userID] = name
+			adminState[userID] = fmt.Sprintf("wait_vip_edit_price:%d", idx)
+			mu.Unlock()
+
+			sendUserBot(bot, msg.Chat.ID, "💰 Endi yangi narxni yuboring:")
+			return
+		}
+
+		if strings.HasPrefix(state, "wait_vip_edit_price:") {
+			idxStr := strings.TrimPrefix(state, "wait_vip_edit_price:")
+			idx, _ := strconv.Atoi(idxStr)
+
+			price := strings.TrimSpace(msg.Text)
+			if price == "" {
+				sendUserBot(bot, msg.Chat.ID, "❌ Narx bo'sh bo'lishi mumkin emas.")
+				return
+			}
+
+			mu.Lock()
+			name := quickKinoTemp[userID]
+			delete(quickKinoTemp, userID)
+			delete(adminState, userID)
+			mu.Unlock()
+
+			o := orm.NewOrm()
+			createdBot := models.CreatedBot{Id: b.Id}
+			if err := o.Read(&createdBot); err != nil {
+				sendUserBot(bot, msg.Chat.ID, "❌ Ma'lumotni o'qishda xato.")
+				return
+			}
+
+			lines := parseVipLines(createdBot.VipPrices)
+			if idx < 0 || idx >= len(lines) {
+				sendUserBot(bot, msg.Chat.ID, "❌ Bu tarif topilmadi (o'chirilgan bo'lishi mumkin).")
+				return
+			}
+
+			lines[idx] = fmt.Sprintf("%s: %s", name, price)
+			createdBot.VipPrices = strings.Join(lines, "\n") + "\n"
+
+			if _, err := o.Update(&createdBot, "VipPrices"); err != nil {
+				sendUserBot(bot, msg.Chat.ID, "❌ Saqlashda xato yuz berdi.")
+				return
+			}
+
+			sendUserBot(bot, msg.Chat.ID, fmt.Sprintf("✅ Yangilandi:\n%s: %s", name, price))
+			return
+		}
 	}
 }
 
@@ -159,7 +264,6 @@ func ShowMembership(bot *tgbotapi.BotAPI, b *models.CreatedBot, chatID int64, us
 		return
 	}
 
-	// 🎯 Faqat obuna bo'lmagan kanallarni ajratib olamiz
 	var notSubscribed []models.BotChannel
 	for _, ch := range channels {
 		member, err := bot.GetChatMember(tgbotapi.GetChatMemberConfig{
@@ -170,7 +274,7 @@ func ShowMembership(bot *tgbotapi.BotAPI, b *models.CreatedBot, chatID int64, us
 		})
 
 		if err == nil && (member.Status == "member" || member.Status == "administrator" || member.Status == "creator") {
-			continue // A'zo bo'lsa, ro'yxatga qo'shmaymiz
+			continue
 		}
 
 		hasRequest := o.QueryTable(new(models.BotJoinRequest)).
@@ -191,7 +295,7 @@ func ShowMembership(bot *tgbotapi.BotAPI, b *models.CreatedBot, chatID int64, us
 		return
 	}
 
-	text := "🚨 Botdan foydalanish uchun quyidagi kanallarga obuna bo‘ling:\n\n"
+	text := "⚠️ Botdan foydalanish uchun obuna bo‘ling:\n\n"
 
 	var rows [][]RangliTugma
 
@@ -199,20 +303,27 @@ func ShowMembership(bot *tgbotapi.BotAPI, b *models.CreatedBot, chatID int64, us
 		obunaTugma := RangliTugma{
 			Text:              "OBUNA BO'LISH",
 			URL:               ch.InviteLink,
-			Style:             "primary",
-			IconCustomEmojiID: "5471888897468310486",
+			IconCustomEmojiID: "5775887550262546277",
 		}
 		rows = append(rows, []RangliTugma{obunaTugma})
 	}
 
 	checkBtn := RangliTugma{
-		Text:              "✅ Tekshirish",
+		Text:              "Tekshirish",
 		CallbackData:      fmt.Sprintf("check_sub_%d", b.Id),
 		Style:             "success",
 		IconCustomEmojiID: "5460960662421257616",
 	}
-	rows = append(rows, []RangliTugma{checkBtn})
 
+	rows = append(rows, []RangliTugma{checkBtn})
+	// 2. VIP Narxlari tugmasi (Tekshirishning pastida)
+	vipBtn := RangliTugma{
+		Text:              " 💎 vip",
+		CallbackData:      fmt.Sprintf("vip_prices_%d", b.Id), // Anime ID'sini uzatamiz
+		Style:             "primary",
+		IconCustomEmojiID: "5310134444541819884",
+	}
+	rows = append(rows, []RangliTugma{vipBtn})
 	keyboard := RangliKlaviatura{
 		InlineKeyboard: rows,
 	}
@@ -301,5 +412,109 @@ func ShowChannelsToDelete(bot *tgbotapi.BotAPI, b *models.CreatedBot, chatID int
 
 	msg := tgbotapi.NewMessage(chatID, text)
 	msg.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(rows...) // Mana shu yer muammosiz holatga keltirildi
+	bot.Send(msg)
+}
+
+func HandleVipPricesCallback(bot *tgbotapi.BotAPI, callback *tgbotapi.CallbackQuery, botID int64) {
+	o := orm.NewOrm()
+	createdBot := models.CreatedBot{Id: botID}
+
+	err := o.Read(&createdBot)
+	if err != nil {
+		bot.Request(tgbotapi.NewCallback(callback.ID, "❌ Ma'lumot topilmadi!"))
+		return
+	}
+
+	// 🎯 Owner (bot egasi)ni bazadan to'liq o'qib olamiz
+	o.LoadRelated(&createdBot, "Owner")
+
+	pricesText := createdBot.VipPrices
+	if pricesText == "" {
+		pricesText = "💎 VIP Obuna Tariflari\n\n" +
+			" 1 oylik: 10,000 so'm\n" +
+			" 3 oylik: 25,000 so'm\n" +
+			" Cheksiz (VIP): 50,000 so'm\n\n" +
+			"💳 Sotib olish uchun admin bilan bog'laning!"
+	}
+
+	if createdBot.Note != "" {
+		pricesText += fmt.Sprintf("\n\n📌 Eslatma: %s", createdBot.Note)
+	}
+
+	msg := tgbotapi.NewMessage(callback.Message.Chat.ID, pricesText)
+	msg.ParseMode = "Markdown"
+
+	// 🎯 Admin bilan bog'lanish tugmasi — bosilganda uning shaxsiy chatiga o'tadi
+	if createdBot.Owner != nil {
+		var contactURL string
+		if createdBot.Owner.Username != "" {
+			contactURL = "https://t.me/" + createdBot.Owner.Username
+		} else {
+			// Username bo'lmasa, TG ID orqali (faqat umumiy chat bo'lgan foydalanuvchilarda ishlaydi)
+			contactURL = fmt.Sprintf("tg://user?id=%d", createdBot.Owner.TgId)
+		}
+
+		contactBtn := tgbotapi.NewInlineKeyboardButtonURL("💎 sotib olish", contactURL)
+		msg.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(
+			tgbotapi.NewInlineKeyboardRow(contactBtn),
+		)
+	}
+
+	bot.Send(msg)
+	bot.Request(tgbotapi.NewCallback(callback.ID, ""))
+}
+
+func parseVipLines(vipPrices string) []string {
+	raw := strings.Split(strings.TrimSpace(vipPrices), "\n")
+	var lines []string
+	for _, l := range raw {
+		l = strings.TrimSpace(l)
+		if l != "" {
+			lines = append(lines, l)
+		}
+	}
+	return lines
+}
+
+func showVipListForAction(bot *tgbotapi.BotAPI, b *models.CreatedBot, chatID int64, userID int64, action string) {
+	o := orm.NewOrm()
+	createdBot := models.CreatedBot{Id: b.Id}
+	if err := o.Read(&createdBot); err != nil {
+		sendUserBot(bot, chatID, "❌ Ma'lumotni o'qishda xato.")
+		return
+	}
+
+	lines := parseVipLines(createdBot.VipPrices)
+	if len(lines) == 0 {
+		sendUserBot(bot, chatID, "📭 Hozircha hech qanday VIP narx qo'shilmagan.")
+		return
+	}
+
+	var text string
+	var rows [][]tgbotapi.InlineKeyboardButton
+
+	if action == "delete" {
+		text = "🗑 O'chirmoqchi bo'lgan tarifni tanlang:"
+	} else {
+		text = "✏️ Tahrirlamoqchi bo'lgan tarifni tanlang:"
+	}
+
+	for i, line := range lines {
+		btnText := line
+		if len(btnText) > 40 {
+			btnText = btnText[:40] + "..."
+		}
+		var cb string
+		if action == "delete" {
+			cb = fmt.Sprintf("vip_del:%d", i)
+		} else {
+			cb = fmt.Sprintf("vip_edit:%d", i)
+		}
+		btn := tgbotapi.NewInlineKeyboardButtonData(btnText, cb)
+		rows = append(rows, tgbotapi.NewInlineKeyboardRow(btn))
+	}
+
+	msg := tgbotapi.NewMessage(chatID, text)
+	msg.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(rows...)
 	bot.Send(msg)
 }

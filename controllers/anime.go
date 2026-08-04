@@ -228,7 +228,11 @@ func HandleAnimeBotMessage(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgbo
 	}
 
 	if !botUser.IsVip && !CheckSubscription(bot, b, userID) {
-		ShowMembership(bot, b, chatID, userID) // ✅ yangi — userID qo'shildi
+		mu.Lock()
+		pendingSearch[userID] = msg.Text // 🎯 nima qidirgan bo'lsa saqlab qolamiz
+		mu.Unlock()
+
+		ShowMembership(bot, b, chatID, userID)
 		return
 	}
 	if strings.HasPrefix(msg.Text, "/start") {
@@ -1523,23 +1527,23 @@ func showStatistics(bot *tgbotapi.BotAPI, b *models.CreatedBot, chatID int64) {
 		Count()
 
 	text := fmt.Sprintf(
-		"📊 *Bot Statistikasi*\n\n"+
-			"🎬 Jami anime/kino: `%d`\n"+
-			"👥 Jami user: `%d`\n"+
-			"⭐ VIP user: `%d`\n"+
-			"⛔ Ban user: `%d`\n\n"+
-			"🆕 *Qo'shilgan foydalanuvchilar*\n"+
-			"├ 📅 1 kun: `%d`\n"+
-			"├ 📆 7 kun: `%d`\n"+
-			"├ 🗓 30 kun: `%d`\n"+
-			"├ 📈 60 kun: `%d`\n"+
-			"└ 🚀 90 kun: `%d`\n\n"+
-			"🟢 *Faol foydalanuvchilar*\n"+
-			"├ ⚡ 1 kun: `%d`\n"+
-			"├ 🔥 7 kun: `%d`\n"+
-			"├ 💎 30 kun: `%d`\n"+
-			"├ 📊 60 kun: `%d`\n"+
-			"└ 🏆 90 kun: `%d`\n",
+		" Bot Statistikasi\n\n"+
+			"• Jami anime: `%d`\n"+
+			"• Jami user: `%d`\n"+
+			"• VIP user: `%d`\n"+
+			"• Ban user: `%d`\n\n"+
+			"• Qo'shilgan foydalanuvchilar\n"+
+			"├ 1 kun: `%d`\n"+
+			"├ 7 kun: `%d`\n"+
+			"├ 30 kun: `%d`\n"+
+			"├ 60 kun: `%d`\n"+
+			"└ 90 kun: `%d`\n\n"+
+			"• Faol foydalanuvchilar\n"+
+			"├ 1 kun: `%d`\n"+
+			"├ 7 kun: `%d`\n"+
+			"├ 30 kun: `%d`\n"+
+			"├ 60 kun: `%d`\n"+
+			"└ 90 kun: `%d`\n",
 		totalAnime,
 		totalUsers,
 		vipCount,

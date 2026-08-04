@@ -31,7 +31,17 @@ var (
 )
 
 const DailyPrice = 1500.0
+const DailyPriceAnimePro = 3000.0
 const TestDuration = 24 * time.Hour
+
+// dailyPriceFor bot turiga qarab kunlik narxni qaytaradi.
+// "animepro" uchun 3000 so'm, qolgan barcha turlar uchun standart 1500 so'm.
+func dailyPriceFor(b *models.CreatedBot) float64 {
+	if b != nil && b.BotType != nil && b.BotType.Code == "animepro" {
+		return DailyPriceAnimePro
+	}
+	return DailyPrice
+}
 
 func SetSharedCreatorBot(bot *tgbotapi.BotAPI) {
 	CreatorBot = bot
@@ -55,7 +65,7 @@ func StartNewBot(b *models.CreatedBot) {
 }
 
 // StartBot — to'xtatilgan botni qayta yoqishda chaqiriladi (masalan "Qayta yoqish" tugmasi,
-// yoki balans to'ldirilgach ResumeBotsAfterTopUp orqali). Darhol 1.500 so'm yechiladi.
+// yoki balans to'ldirilgach ResumeBotsAfterTopUp orqali). Darhol bot turiga mos narx yechiladi.
 func StartBot(b *models.CreatedBot) {
 	mu.Lock()
 	defer mu.Unlock()
@@ -90,6 +100,8 @@ func startBotInternal(b *models.CreatedBot, mode startMode) {
 		}
 	}
 
+	price := dailyPriceFor(b)
+
 	// 💰 Faqat "qayta yoqish" holatida darhol pul yechiladi. Yangi bot uchun — BEPUL.
 	if mode == ModeResume {
 		var owner models.UserBot
@@ -98,17 +110,17 @@ func startBotInternal(b *models.CreatedBot, mode startMode) {
 			return
 		}
 
-		if owner.Balance < DailyPrice {
-			log.Printf("⛔ Bot @%s ishga tushmadi: balans yetarli emas (%.0f so'm)", b.BotUsername, owner.Balance)
+		if owner.Balance < price {
+			log.Printf("⛔ Bot @%s ishga tushmadi: balans yetarli emas (%.0f so'm, kerak: %.0f so'm)", b.BotUsername, owner.Balance, price)
 			b.IsSuspended = true
 			o.Update(b, "IsSuspended")
 			NotifyOwner(owner.TgId, b, false)
 			return
 		}
 
-		owner.Balance -= DailyPrice
+		owner.Balance -= price
 		o.Update(&owner, "Balance")
-		log.Printf("💰 Bot @%s uchun 1.500 so'm darhol yechildi. Qolgan balans: %.0f", b.BotUsername, owner.Balance)
+		log.Printf("💰 Bot @%s uchun %.0f so'm darhol yechildi. Qolgan balans: %.0f", b.BotUsername, price, owner.Balance)
 	}
 
 	// Eski botni to'xtatish
@@ -144,7 +156,7 @@ func startBotInternal(b *models.CreatedBot, mode startMode) {
 		b.PaidUntil = time.Now().Add(24 * time.Hour)
 		b.IsSuspended = false
 		o.Update(b, "PaidUntil", "IsSuspended")
-		log.Printf("✅ Bot ishga tushdi: @%s (1 kun to'landi)", b.BotUsername)
+		log.Printf("✅ Bot ishga tushdi: @%s (1 kun to'landi, %.0f so'm)", b.BotUsername, price)
 
 	case ModeReconnect:
 		log.Printf("✅ Bot qayta ulandi: @%s (PaidUntil o'zgarishsiz: %v)", b.BotUsername, b.PaidUntil)
@@ -223,9 +235,12 @@ func fastBillingCheck() {
 	o.QueryTable("created_bot").
 		Filter("IsActive", true).
 		Filter("IsSuspended", false).
+		RelatedSel("BotType").
 		All(&activeBots)
 
-	for _, bot := range activeBots {
+	for i := range activeBots {
+		bot := &activeBots[i]
+
 		if bot.PaidUntil.Before(now) {
 			var user models.UserBot
 			err := o.QueryTable("user_bot").Filter("Id", bot.Owner.Id).One(&user)
@@ -234,20 +249,22 @@ func fastBillingCheck() {
 				continue
 			}
 
-			if user.Balance >= DailyPrice {
-				user.Balance -= DailyPrice
+			price := dailyPriceFor(bot)
+
+			if user.Balance >= price {
+				user.Balance -= price
 				o.Update(&user, "Balance")
 
 				bot.PaidUntil = time.Now().Add(TestDuration)
-				o.Update(&bot, "PaidUntil")
+				o.Update(bot, "PaidUntil")
 
-				log.Printf("💰 Bot @%s uchun 1500 so'm yechildi. Yangi muddat: +24 Hour", bot.BotUsername)
+				log.Printf("💰 Bot @%s uchun %.0f so'm yechildi. Yangi muddat: +24 Hour", bot.BotUsername, price)
 			} else {
 				StopBot(bot.Id)
 				bot.IsSuspended = true
-				o.Update(&bot, "IsSuspended")
-				NotifyOwner(user.TgId, &bot, false)
-				log.Printf("⚠️ Bot @%s to'xtatildi (balans yetmadi)", bot.BotUsername)
+				o.Update(bot, "IsSuspended")
+				NotifyOwner(user.TgId, bot, false)
+				log.Printf("⚠️ Bot @%s to'xtatildi (balans yetmadi, kerak: %.0f so'm)", bot.BotUsername, price)
 			}
 		}
 	}
@@ -273,6 +290,7 @@ func ResumeBotsAfterTopUp(ownerTgId int64) {
 		Filter("Owner__Id", owner.Id).
 		Filter("IsActive", true).
 		Filter("IsSuspended", true).
+		RelatedSel("BotType").
 		All(&suspendedBots)
 
 	if err != nil || len(suspendedBots) == 0 {
@@ -292,8 +310,10 @@ func ResumeBotsAfterTopUp(ownerTgId int64) {
 			break
 		}
 
-		if owner.Balance < DailyPrice {
-			log.Printf("⛔ Balans yetarli emas, qolgan botlar ochilmaydi")
+		price := dailyPriceFor(b)
+
+		if owner.Balance < price {
+			log.Printf("⛔ Balans yetarli emas (kerak: %.0f so'm), qolgan botlar ochilmaydi", price)
 			break
 		}
 
@@ -315,9 +335,11 @@ func NotifyOwner(ownerTgId int64, b *models.CreatedBot, resumed bool) {
 		return
 	}
 
+	price := dailyPriceFor(b)
+
 	var text string
 	if resumed {
-		text = "✅ *@" + b.BotUsername + "* botingiz qayta ishga tushdi!\n💰 Hisobingizdan *1,500 so'm* yechildi."
+		text = fmt.Sprintf("✅ *@%s* botingiz qayta ishga tushdi!\n💰 Hisobingizdan *%.0f so'm* yechildi.", b.BotUsername, price)
 	} else {
 		text = "⚠️ *@" + b.BotUsername + "* botingiz *to'xtatildi!*\n\n💳 Hisobingizda mablag' yetarli emas.\n➕ Balansni to'ldiring."
 	}

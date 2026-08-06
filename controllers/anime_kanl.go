@@ -316,10 +316,9 @@ func ShowMembership(bot *tgbotapi.BotAPI, b *models.CreatedBot, chatID int64, us
 	}
 
 	rows = append(rows, []RangliTugma{checkBtn})
-	// 2. VIP Narxlari tugmasi (Tekshirishning pastida)
 	vipBtn := RangliTugma{
 		Text:              " 💎 vip",
-		CallbackData:      fmt.Sprintf("vip_prices_%d", b.Id), // Anime ID'sini uzatamiz
+		CallbackData:      fmt.Sprintf("vip_prices_%d", b.Id),
 		Style:             "primary",
 		IconCustomEmojiID: "5310134444541819884",
 	}
@@ -416,6 +415,11 @@ func ShowChannelsToDelete(bot *tgbotapi.BotAPI, b *models.CreatedBot, chatID int
 }
 
 func HandleVipPricesCallback(bot *tgbotapi.BotAPI, callback *tgbotapi.CallbackQuery, botID int64) {
+	if callback.Message == nil {
+		bot.Request(tgbotapi.NewCallback(callback.ID, "❌ Xabar topilmadi."))
+		return
+	}
+
 	o := orm.NewOrm()
 	createdBot := models.CreatedBot{Id: botID}
 
@@ -425,7 +429,6 @@ func HandleVipPricesCallback(bot *tgbotapi.BotAPI, callback *tgbotapi.CallbackQu
 		return
 	}
 
-	// 🎯 Owner (bot egasi)ni bazadan to'liq o'qib olamiz
 	o.LoadRelated(&createdBot, "Owner")
 
 	pricesText := createdBot.VipPrices
@@ -444,13 +447,11 @@ func HandleVipPricesCallback(bot *tgbotapi.BotAPI, callback *tgbotapi.CallbackQu
 	msg := tgbotapi.NewMessage(callback.Message.Chat.ID, pricesText)
 	msg.ParseMode = "Markdown"
 
-	// 🎯 Admin bilan bog'lanish tugmasi — bosilganda uning shaxsiy chatiga o'tadi
 	if createdBot.Owner != nil {
 		var contactURL string
 		if createdBot.Owner.Username != "" {
 			contactURL = "https://t.me/" + createdBot.Owner.Username
 		} else {
-			// Username bo'lmasa, TG ID orqali (faqat umumiy chat bo'lgan foydalanuvchilarda ishlaydi)
 			contactURL = fmt.Sprintf("tg://user?id=%d", createdBot.Owner.TgId)
 		}
 
@@ -460,7 +461,15 @@ func HandleVipPricesCallback(bot *tgbotapi.BotAPI, callback *tgbotapi.CallbackQu
 		)
 	}
 
-	bot.Send(msg)
+	// 🎯 FIX: Markdown xato bersa, formatlashsiz qayta yuboramiz
+	if _, sendErr := bot.Send(msg); sendErr != nil {
+		log.Printf("🟡 Markdown xatosi, formatlashsiz qayta yuborilmoqda: %v", sendErr)
+		msg.ParseMode = "" // Markdown o'chiriladi
+		if _, sendErr2 := bot.Send(msg); sendErr2 != nil {
+			log.Printf("🔴 Ikkinchi urinishda ham xato: %v", sendErr2)
+		}
+	}
+
 	bot.Request(tgbotapi.NewCallback(callback.ID, ""))
 }
 

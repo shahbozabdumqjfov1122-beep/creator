@@ -1,13 +1,13 @@
 module creator
 
-go 1.25.0
+go 1.24.2
 
 require (
-	github.com/beego/beego/v2 v2.3.10
+	github.com/beego/beego/v2 v2.3.8
 	github.com/go-telegram-bot-api/telegram-bot-api/v5 v5.5.1
 	github.com/lib/pq v1.12.3
 	github.com/smartystreets/goconvey v1.8.1
-	golang.org/x/crypto v0.53.0
+	golang.org/x/crypto v0.33.0
 )
 
 require (
@@ -26,9 +26,9 @@ require (
 	github.com/shiena/ansicolor v0.0.0-20230509054315-a9deabde6e02 // indirect
 	github.com/smarty/assertions v1.15.0 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
-	golang.org/x/net v0.55.0 // indirect
-	golang.org/x/sys v0.46.0 // indirect
-	golang.org/x/text v0.38.0 // indirect
+	golang.org/x/net v0.35.0 // indirect
+	golang.org/x/sys v0.32.0 // indirect
+	golang.org/x/text v0.22.0 // indirect
 	google.golang.org/protobuf v1.36.6 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

@@ -297,12 +297,11 @@ func HandleAnimeBotMessagePro(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *t
 			return
 
 		default:
-			if strings.HasPrefix(msg.Text, "/") {
-				sendUserBot(bot, chatID, "/admin")
-				return
-			}
-			handleAnimeByCodePro(bot, b, msg, msg.Text)
-			return
+			//if strings.HasPrefix(msg.Text, "/") {
+			//	sendUserBot(bot, chatID, "/admin")
+			//	return
+			//}
+
 		}
 	}
 	if !botUser.IsVip && !CheckSubscription(bot, b, userID) {
@@ -317,6 +316,7 @@ func HandleAnimeBotMessagePro(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *t
 		handleAnimeStartPro(bot, b, msg)
 		return
 	}
+
 	switch msg.Text {
 	case "/start":
 		handleAnimeStartPro(bot, b, msg)
@@ -325,7 +325,9 @@ func HandleAnimeBotMessagePro(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *t
 	case "/help":
 		sendUserBot(bot, chatID, "🎌 Anime kodini yozing...")
 		return
-
+	case "reyting", "/reyting", "Reyting", "REYTING", "рейтинг", "Рейтинг":
+		showTopAnimePro(bot, b, chatID)
+		return
 	default:
 		if strings.HasPrefix(msg.Text, "/") {
 			sendUserBot(bot, chatID, "/admin")
@@ -679,6 +681,7 @@ func sendProtectedPhotoPro(bot *tgbotapi.BotAPI, chatID int64, fileID, caption s
 	params := tgbotapi.Params{}
 	params.AddNonEmpty("chat_id", strconv.FormatInt(chatID, 10))
 	params.AddNonEmpty("photo", fileID)
+	params.AddNonEmpty("parse_mode", "HTML") // ← shu qatorni qo‘shing
 	params.AddNonEmpty("caption", caption)
 	if keyboard != nil {
 		data, err := json.Marshal(keyboard)
@@ -700,6 +703,7 @@ func sendProtectedDocumentPro(bot *tgbotapi.BotAPI, chatID int64, fileID, captio
 func sendProtectedTextPro(bot *tgbotapi.BotAPI, chatID int64, text string, keyboard *tgbotapi.InlineKeyboardMarkup, protect bool) error {
 	params := tgbotapi.Params{}
 	params.AddNonEmpty("chat_id", strconv.FormatInt(chatID, 10))
+	params.AddNonEmpty("parse_mode", "HTML") // ← shu qatorni qo‘shing
 	params.AddNonEmpty("text", text)
 	if keyboard != nil {
 		data, err := json.Marshal(keyboard)
@@ -718,24 +722,31 @@ func handleAnimeStartPro(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgbota
 		return
 	}
 
-	text := "🎌 *Anime Botga xush kelibsiz!*\n\nO‘zingizga yoqqan anime **kodini** yozib yuboring."
+	text := `<tg-emoji emoji-id="5960714428394507968">🏷</tg-emoji> /reyting - Top Anime
+<tg-emoji emoji-id="5899757765743615694">📥</tg-emoji> /admin - Admin uchun 
+<tg-emoji emoji-id="5899757765743615694"></tg-emoji>
+<tg-emoji emoji-id="5987802868734760945">🆔</tg-emoji> Anime nomi yoki kodini kiriting:`
+
 	sendUserBot(bot, msg.Chat.ID, text)
 }
 
 func handleAnimeByCodePro(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgbotapi.Message, code string) {
-
 	fmt.Println("========== ANIME SEARCH ==========")
 	fmt.Println("BotID:", b.Id)
 	fmt.Println("Code:", code)
 
 	userID := msg.From.ID
 	botUser := GetOrCreateBotUser(b, userID, msg.From)
-	// VIP yoki admin bo'lmasa — forward/saqlash taqiqlanadi (qurilmadan qat'i nazar)
-	protectContent := !(botUser.IsVip || isAdmin(b, userID))
+
+	// 2. Protect qoida:
+	//    - Admin → protect = false (uzata oladi)
+	//    - VIP va oddiy → protect = true (uzata olmaydi)
+	protectContent := !isAdmin(b, userID)
 
 	o := orm.NewOrm()
 	var anime models.Anime
 
+	// 1. Avval animeni bazadan qidirib topamiz
 	err := o.QueryTable(new(models.Anime)).
 		Filter("Bot__Id", b.Id).
 		Filter("Code", strings.ToLower(strings.TrimSpace(code))).
@@ -747,6 +758,13 @@ func handleAnimeByCodePro(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgbot
 		handleAnimeSearchPro(bot, b, msg, code)
 		return
 	}
+
+	// 2. Anime bazadan topilgandan keyin VIP ekanligini tekshiramiz:
+	if anime.IsVipOnly && !botUser.IsVip && !isAdmin(b, userID) {
+		sendUserBot(bot, msg.Chat.ID, "🔒 Bu anime faqat VIP foydalanuvchilar uchun.\n\nVIP bo‘lish uchun admin bilan bog‘laning.")
+		return
+	}
+
 	fmt.Println("FOUND ANIME:")
 	fmt.Println("ID:", anime.Id)
 	fmt.Println("Name:", anime.Name)
@@ -755,17 +773,27 @@ func handleAnimeByCodePro(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgbot
 	fmt.Println("CoverKind:", anime.CoverKind)
 	fmt.Println("PhotoID:", anime.PhotoID)
 
+	// 1. Birinchi o'rinda ko'rishlar sonini oshirib olamiz
+	anime.ViewsCount++
+	o.Update(&anime, "ViewsCount")
+
+	// 2. Bir qismli anime bo'lsa
 	if anime.PartsCount == 1 {
 		sendSinglePartAnimePro(bot, o, msg.Chat.ID, &anime, b.Note, protectContent)
 		return
 	}
 
+	// 3. Ko'p qismli anime uchun matn tayyorlaymiz
 	caption := fmt.Sprintf(
-		"%s\n\nJami qismlar - %d",
+		"%s\n\n"+
+			`<tg-emoji emoji-id="5960714428394507968">🏷</tg-emoji>Jami qismlar: %d`+"\n"+
+			`<tg-emoji emoji-id="5899757765743615694">📥</tg-emoji>Yuklab olishlar: %d`+"\n"+
+			`<tg-emoji emoji-id="5987802868734760945">🆔</tg-emoji>Anime kodi: %s`,
 		anime.Name,
 		anime.PartsCount,
+		anime.ViewsCount,
+		anime.Code,
 	)
-
 	if b.Note != "" {
 		caption += fmt.Sprintf("\n\n%s", b.Note)
 	}
@@ -1113,7 +1141,10 @@ func RouteAnimeEditStatePro(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgb
 			sendUserBot(bot, chatID, "❌ Ushbu botga tegishli bunday kodli anime topilmadi.\n\nQaytadan to'g'ri kod kiriting:")
 			return true
 		}
-
+		vipBtnText := "🔒 Faqat VIP'larga"
+		if anime.IsVipOnly {
+			vipBtnText = "🔓 Hammaga ochish"
+		}
 		keyboard := tgbotapi.NewInlineKeyboardMarkup(
 			tgbotapi.NewInlineKeyboardRow(
 				tgbotapi.NewInlineKeyboardButtonData("🔑 Kodni o'zgartirish", fmt.Sprintf("edit_code:%d", anime.Id)),
@@ -1125,6 +1156,7 @@ func RouteAnimeEditStatePro(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgb
 			),
 			tgbotapi.NewInlineKeyboardRow(
 				tgbotapi.NewInlineKeyboardButtonData("🖼 Rasmini o'zgartirish", fmt.Sprintf("edit_photo:%d", anime.Id)),
+				tgbotapi.NewInlineKeyboardButtonData(vipBtnText, fmt.Sprintf("toggle_vip_only:%d", anime.Id)),
 			),
 			tgbotapi.NewInlineKeyboardRow(
 				tgbotapi.NewInlineKeyboardButtonData("🗑 Butunlay o'chirish", fmt.Sprintf("delete_anime:%d", anime.Id)),
@@ -1957,6 +1989,79 @@ func HandleAnimeCallbackPro(bot *tgbotapi.BotAPI, cb *tgbotapi.CallbackQuery) {
 	log.Printf("Anime callback keldi: %s (Chat ID: %d)", data, chatID)
 
 	switch {
+	case strings.HasPrefix(data, "vip_prices_"):
+		log.Printf("🟣 [VIP_PRICES] Callback keldi! Data: %s | ChatID: %d | UserID: %d", data, chatID, userID)
+
+		botID, err := strconv.ParseInt(strings.TrimPrefix(data, "vip_prices_"), 10, 64)
+		if err != nil {
+			log.Printf("🔴 [VIP_PRICES] Bot ID parse xatosi: %v (raw data: %s)", err, data)
+			bot.Send(tgbotapi.NewMessage(chatID, "❌ Bot ID aniqlanmadi"))
+			return
+		}
+
+		log.Printf("🟢 [VIP_PRICES] Bot ID aniqlandi: %d — HandleVipPricesCallback chaqirilyapti...", botID)
+
+		HandleVipPricesCallback(bot, cb, botID)
+
+		log.Printf("✅ [VIP_PRICES] HandleVipPricesCallback tugadi (BotID: %d)", botID)
+		return
+	case strings.HasPrefix(data, "toggle_vip_only:"):
+		animeID, err := strconv.ParseInt(strings.TrimPrefix(data, "toggle_vip_only:"), 10, 64)
+		if err != nil {
+			bot.Send(tgbotapi.NewMessage(chatID, "❌ ID aniqlanmadi"))
+			return
+		}
+
+		o := orm.NewOrm()
+		var anime models.Anime
+		err = o.QueryTable(new(models.Anime)).Filter("Id", animeID).One(&anime)
+		if err != nil {
+			bot.Send(tgbotapi.NewMessage(chatID, "❌ Anime topilmadi"))
+			return
+		}
+
+		anime.IsVipOnly = !anime.IsVipOnly
+		_, _ = o.Update(&anime, "IsVipOnly")
+
+		status := "🔓 Endi **hamma** ko‘ra oladi"
+		if anime.IsVipOnly {
+			status = "🔒 Endi **faqat VIP** lar ko‘ra oladi"
+		}
+
+		msg := tgbotapi.NewMessage(chatID, status)
+		msg.ParseMode = "Markdown"
+		bot.Send(msg)
+		return
+
+	case strings.HasPrefix(data, "top:"):
+		parts := strings.Split(strings.TrimPrefix(data, "top:"), ":")
+		if len(parts) != 2 {
+			bot.Send(tgbotapi.NewMessage(chatID, "❌ Noto‘g‘ri format."))
+			return
+		}
+
+		botID, err := strconv.ParseInt(parts[0], 10, 64)
+		if err != nil {
+			bot.Send(tgbotapi.NewMessage(chatID, "❌ Bot ID xato."))
+			return
+		}
+		code := parts[1]
+
+		o := orm.NewOrm()
+		var createdBot models.CreatedBot
+		if err := o.QueryTable(new(models.CreatedBot)).Filter("Id", botID).One(&createdBot); err != nil {
+			bot.Send(tgbotapi.NewMessage(chatID, "❌ Bot topilmadi."))
+			return
+		}
+
+		fakeMsg := &tgbotapi.Message{
+			Chat: &tgbotapi.Chat{ID: chatID},
+			From: cb.From,
+			Text: code,
+		}
+		handleAnimeByCodePro(bot, &createdBot, fakeMsg, code)
+		return
+
 	case strings.HasPrefix(data, "anime_select_"):
 		idStr := strings.TrimPrefix(data, "anime_select_")
 		animeID, err := strconv.ParseInt(idStr, 10, 64)
@@ -1995,6 +2100,7 @@ func HandleAnimeCallbackPro(bot *tgbotapi.BotAPI, cb *tgbotapi.CallbackQuery) {
 			}
 		}
 		return
+
 	case strings.HasPrefix(data, "admin_info:"):
 		parts := strings.Split(strings.TrimPrefix(data, "admin_info:"), ":")
 		if len(parts) != 2 {
@@ -2014,6 +2120,7 @@ func HandleAnimeCallbackPro(bot *tgbotapi.BotAPI, cb *tgbotapi.CallbackQuery) {
 		tgID, _ := strconv.ParseInt(parts[1], 10, 64)
 		performAdminRemovePro(bot, chatID, botID, tgID)
 		return
+
 	case strings.HasPrefix(data, "anime_page:"):
 		handleAnimePagePro(bot, cb)
 
@@ -2241,22 +2348,20 @@ func handleAnimePartPro(bot *tgbotapi.BotAPI, cb *tgbotapi.CallbackQuery) {
 		One(&anime)
 
 	if aerr == nil && anime.Bot != nil {
-		botUser := GetOrCreateBotUser(anime.Bot, userID, cb.From)
-
-		// FAQUAT VIP va Admin uchun cheklov O'CHIRILADI
-		if botUser.IsVip || isAdmin(anime.Bot, userID) {
+		// FAQAT Admin uchun cheklov O'CHIRILADI
+		if isAdmin(anime.Bot, userID) {
 			protect = false
 		}
 		botNote = anime.Bot.Note
 	} else {
-		log.Printf("🔴 BOT VAYa ANIME BOG'LANIŞIDA XATOLIK: %v", aerr)
+		log.Printf("🔴 BOT VA ANIME BOG'LANISHIDA XATOLIK: %v", aerr)
 	}
 
 	// Logging (Terminalda tekshirib olishingiz uchun)
 	log.Printf("DEBUG: UserID: %d | IsProtect: %t | Kind: %s", userID, protect, animePart.Kind)
 
 	// Caption tayyorlaymiz
-	caption := fmt.Sprintf("%s\nqism - %d", name, partOrder)
+	caption := fmt.Sprintf("%s - [%d-qism]", name, partOrder)
 	if botNote != "" {
 		caption += fmt.Sprintf("\n\n%s", botNote)
 	}
@@ -2648,15 +2753,14 @@ func clearAdminState(userID int64) {
 }
 
 func StartAdCreation(bot *tgbotapi.BotAPI, chatID int64, userID int64) {
-	// Yangi reklama obyekti va state o'rnatamiz
 	setPendingAd(userID, AdData{})
 	setAdminState(userID, StateWaitingForAdMedia)
 
 	sendUserBot(
 		bot,
 		chatID,
-		"📢 **Reklama yaratish bosqichi:**\n\n"+
-			"📸 Iltimos, reklama uchun **Rasm** yoki **Video** yuboring.",
+		"📢 Reklama yaratish bosqichi:\n\n"+
+			"📸 Iltimos, reklama uchun Rasm yoki Video yuboring.",
 	)
 }
 
@@ -2896,4 +3000,42 @@ func handleDeletePromoChannelCallback(bot *tgbotapi.BotAPI, b *models.CreatedBot
 		)
 		bot.Send(editMsg)
 	}
+}
+
+func showTopAnimePro(bot *tgbotapi.BotAPI, b *models.CreatedBot, chatID int64) {
+	o := orm.NewOrm()
+	var animes []models.Anime
+
+	_, err := o.QueryTable(new(models.Anime)).
+		Filter("Bot__Id", b.Id).
+		OrderBy("-ViewsCount").
+		Limit(10).
+		All(&animes)
+
+	if err != nil || len(animes) == 0 {
+		sendUserBot(bot, chatID, "❌ Hozircha hech qanday anime topilmadi.")
+		return
+	}
+
+	text := "<b>Eng ko‘p ko‘rilgan 10 ta anime</b>\n\nKodni bosib tomosha qiling:"
+
+	var rows [][]tgbotapi.InlineKeyboardButton
+
+	for _, a := range animes {
+		name := a.Name
+		if len([]rune(name)) > 22 {
+			name = string([]rune(name)[:22]) + "..."
+		}
+		btnText := fmt.Sprintf("[%d - marta]  %s", a.ViewsCount, name)
+
+		// Endi callback: top:BOTID:CODE
+		btn := tgbotapi.NewInlineKeyboardButtonData(btnText, fmt.Sprintf("top:%d:%s", b.Id, a.Code))
+		rows = append(rows, tgbotapi.NewInlineKeyboardRow(btn))
+	}
+	keyboard := tgbotapi.NewInlineKeyboardMarkup(rows...)
+
+	msg := tgbotapi.NewMessage(chatID, text)
+	msg.ParseMode = "HTML"
+	msg.ReplyMarkup = keyboard
+	bot.Send(msg)
 }

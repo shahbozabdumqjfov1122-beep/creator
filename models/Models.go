@@ -79,10 +79,12 @@ type Anime struct {
 	CoverKind  string      `orm:"size(20);default(photo);column(cover_kind)"`
 	PhotoID    string      `orm:"size(500);column(photo_id)"`
 	PartsCount int         `orm:"default(0);column(parts_count)"`
-	Note       string      `orm:"type(text);null;column(note)"` // 🎯 yangi: admin yozadigan doimiy matn/izoh
+	Note       string      `orm:"type(text);null;column(note)"`   // 🎯 yangi: admin yozadigan doimiy matn/izoh
+	ViewsCount int64       `orm:"default(0);column(views_count)"` // 👁 Yangi: Ko'rishlar / yuklanishlar soni
 	IsActive   bool        `orm:"default(true);column(is_active)"`
 	CreatedAt  time.Time   `orm:"auto_now_add;type(datetime);column(created_at)"`
 	UpdatedAt  time.Time   `orm:"auto_now;type(datetime);column(updated_at)"`
+	IsVipOnly  bool        `orm:"default(false)"`
 }
 
 func (a *Anime) TableName() string {
@@ -199,6 +201,7 @@ type BotStat struct {
 	Action    string // "download", "success", "fail"
 	CreatedAt time.Time
 }
+
 type CardTopUp struct {
 	Id              int64     `orm:"auto;pk"`
 	User            *UserBot  `orm:"rel(fk);column(user_id)"`
@@ -209,6 +212,7 @@ type CardTopUp struct {
 	ExpiresAt       time.Time `orm:"type(datetime)"`
 	ConfirmedAt     time.Time `orm:"type(datetime);null"`
 }
+
 type PromoChannel struct {
 	Id        int64       `orm:"auto;pk"`
 	Bot       *CreatedBot `orm:"rel(fk);column(bot_id)"`

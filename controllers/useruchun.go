@@ -168,7 +168,13 @@ func HandleUserBotCallbackQuery(bot *tgbotapi.BotAPI, b *models.CreatedBot, cb *
 		sendUserBot(bot, chatID, fmt.Sprintf("Reklama %s kanaliga muvaffaqiyatli joylashtirildi!", promoChan.Title))
 		return
 
-	case strings.HasPrefix(data, "anime_page:") || strings.HasPrefix(data, "anime_part:") || strings.HasPrefix(data, "anime_select_") || strings.HasPrefix(data, "send_ad_channel_") || strings.HasPrefix(data, "delete_anime"):
+	case strings.HasPrefix(data, "anime_page:") ||
+		strings.HasPrefix(data, "anime_part:") ||
+		strings.HasPrefix(data, "anime_select_") ||
+		strings.HasPrefix(data, "send_ad_channel_") ||
+		strings.HasPrefix(data, "delete_anime") ||
+		strings.HasPrefix(data, "toggle_vip_only") ||
+		strings.HasPrefix(data, "top:"):
 		switch b.BotType.Code {
 		case "animepro":
 			HandleAnimeCallbackPro(bot, cb) // ProtectContent ishlaydigan Pro handler
@@ -319,6 +325,7 @@ func HandleUserBotCallbackQuery(bot *tgbotapi.BotAPI, b *models.CreatedBot, cb *
 
 		bot.Send(tgbotapi.NewMessage(chatID, "✅ Matn o'chirildi!"))
 		return
+
 	case strings.HasPrefix(data, "vip_prices_"):
 		botID, err := strconv.ParseInt(strings.TrimPrefix(data, "vip_prices_"), 10, 64)
 		if err != nil {
@@ -327,6 +334,7 @@ func HandleUserBotCallbackQuery(bot *tgbotapi.BotAPI, b *models.CreatedBot, cb *
 		}
 		HandleVipPricesCallback(bot, cb, botID)
 		return
+
 	case strings.HasPrefix(data, "vip_del:"):
 		idxStr := strings.TrimPrefix(data, "vip_del:")
 		idx, err := strconv.Atoi(idxStr)
@@ -420,7 +428,7 @@ func saveBotUser(b *models.CreatedBot, from *tgbotapi.User) {
 
 func sendUserBot(bot *tgbotapi.BotAPI, chatID int64, text string) {
 	msg := tgbotapi.NewMessage(chatID, text)
-	msg.ParseMode = "Markdown"
+	msg.ParseMode = "HTML"
 	bot.Send(msg)
 }
 

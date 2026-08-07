@@ -57,7 +57,7 @@ func HandleAnimeBotMessagePro(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *t
 			msg.Text == "/vipnarx" ||
 			msg.Text == "➕ Anime joylash" ||
 			msg.Text == "➕ Kanal qo‘shish" ||
-			msg.Text == "➖ Kanal o‘chirish" ||
+			msg.Text == "➖ Kanall o‘chirish" ||
 			msg.Text == "✏️ Animeni tahrirlash" ||
 			msg.Text == "🗑 Animeni o‘chirish" ||
 			msg.Text == "👥 Foydalanuvchilar" ||
@@ -81,7 +81,8 @@ func HandleAnimeBotMessagePro(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *t
 			msg.Text == "⬅️ Orqaga" ||
 			msg.Text == "/delanime" ||
 			msg.Text == "🎬 qismli anime joylash" ||
-			msg.Text == "/editanime"
+			msg.Text == "/editanime" ||
+			msg.Text == "Kanall qo‘shish"
 
 	if isNewCommand && msg.Text != "/ok" && isAdmin(b, userID) {
 		clearAnimeDraft(userID)
@@ -142,44 +143,54 @@ func HandleAnimeBotMessagePro(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *t
 		}
 		switch msg.Text {
 		case "/admin":
-			showAdminPanelPro(bot, chatID)
+			if b.BotType.Code == "animepro" {
+				showAdminPanelPropr(bot, chatID)
+			} else {
+				showAdminPanelPro(bot, chatID)
+			}
 			return
 
-		case "➕ Anime joylash", "/addanime":
+		case "➕ Anime joylash", "Anime joylash", "/addanime":
 			StartAnimeUpload(bot, b, msg)
 			return
 
-		case "🎬 qismli anime joylash":
+		case "🎬 qismli anime joylash", "qismli anime joylash":
 			StartQuickAnimeUploadPro(bot, b, msg)
 			return
 
-		case "➕ Kanal qo‘shish", "/addchannel":
+		case "➕ Kanal qo‘shish", "Kanall qo‘shish", "/addchannel":
 			HandleAdminCommands(bot, b, msg)
 			return
-		case "💎 vip narx qo'shish", "/vipnarx":
-			HandleAdminCommands(bot, b, msg)
-			return
-		case "🗑 VIP narxni o'chirish":
-			showVipListForAction(bot, b, chatID, userID, "delete")
-			return
-		case "📢 Kanalga reklama yuborish":
-			StartAdCreation(bot, chatID, userID)
-			return
-		case "✏️ VIP narxni tahrirlash":
-			showVipListForAction(bot, b, chatID, userID, "edit")
-			return
-		case "➖ Kanal o‘chirish", "/delchannel":
+
+		case "➖ Kanal o‘chirish", "Kanall o'chirish", "/delchannel":
 			ShowChannelsToDelete(bot, b, chatID)
 			return
 
-		case "✏️ Animeni tahrirlash", "/editanime":
+		case "💎 vip narx qo'shish", "vip narx qo'shish", "/vipnarx":
+			HandleAdminCommands(bot, b, msg)
+			return
+
+		case "🗑 VIP narxni o'chirish", "VIP narxni o'chirish":
+			showVipListForAction(bot, b, chatID, userID, "delete")
+			return
+
+		case "📢 Kanalga reklama yuborish", "Kanalga reklama yuborish":
+			StartAdCreation(bot, chatID, userID)
+			return
+
+		case "✏️ VIP narxni tahrirlash", "VIP narxni tahrirlash":
+			showVipListForAction(bot, b, chatID, userID, "edit")
+			return
+
+		case "✏️ Animeni tahrirlash", "Animeni tahrirlash", "/editanime":
 			mu.Lock()
 			adminState[userID] = "waiting_edit_code"
 			mu.Unlock()
 
 			sendUserBot(bot, chatID, "🔍 *Tahrirlash qismi*\n\nO'zgartirmoqchi bo'lgan anime **kodini** yozib yuboring:")
 			return
-		case "📢 Kanal qo‘shish":
+
+		case "📢 Kanal qo‘shish", "Kanal qo‘shish":
 			mu.Lock()
 			adminState[userID] = "wait_promo_channel"
 			mu.Unlock()
@@ -192,90 +203,118 @@ func HandleAnimeBotMessagePro(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *t
 					"`-1001234567890`",
 			)
 			return
-		case "🗑 Kanal o'chirish":
+
+		case "🗑 Kanal o'chirish", "Kanal o'chirish":
 			showPromoChannelsForDelete(bot, b, chatID)
 			return
-		case "🗑 Animeni o‘chirish", "/delanime":
+
+		case "🗑 Animeni o‘chirish", "Animeni o'chirish", "/delanime":
 			mu.Lock()
 			adminState[userID] = "waiting_delete_code"
 			mu.Unlock()
 
 			sendUserBot(bot, chatID, "🗑 *Animeni o'chirish*\n\nO'chirmoqchi bo'lgan anime **kodini** yozib yuboring:")
 			return
-		case "✍️ Matn sozlash":
+
+		case "✍️ Matn sozlash", "Matn sozlash":
 			log.Printf("🟦 '✍️ Matn' case ishga tushdi, UserID=%d, ChatID=%d", userID, chatID)
 			showBotNoteMenuPro(bot, b, chatID, userID)
 			return
-		case "👥 Foydalanuvchilar":
-			showUsersPanelPro(bot, chatID)
-			return
-		case "💎 vip sozlash":
-			showVIPPanelPro(bot, chatID)
-			return
-		case "📢 Reklama sozlash":
-			showkanalPanelPro(bot, chatID)
+
+		case "👥 Foydalanuvchilar", "Foydalanuvchilar":
+			if b.BotType.Code == "animepro" {
+				showUsersPanelPropr(bot, chatID)
+			} else {
+				showUsersPanelPro(bot, chatID)
+			}
 			return
 
-		case "⭐ VIP qo'shish":
+		case "💎 vip sozlash", "vip sozlash":
+			if b.BotType.Code == "animepro" {
+				showVIPPanelPropr(bot, chatID)
+			} else {
+				showVIPPanelPro(bot, chatID)
+			}
+			return
+
+		case "📢 Reklama sozlash", "Reklama sozlash":
+			if b.BotType.Code == "animepro" {
+				showkanalPanelPropr(bot, chatID)
+			} else {
+				showkanalPanelPro(bot, chatID)
+			}
+			return
+
+		case "⭐ VIP qo'shish", "VIP qo'shish":
 			startVipAddPro(bot, chatID, userID)
 			return
 
-		case "🚫 VIP o'chirish":
+		case "🚫 VIP o'chirish", "VIP o'chirish":
 			startVipRemovePro(bot, chatID, userID)
 			return
 
-		case "📋 VIP ro'yxati":
+		case "📋 VIP ro'yxati", "VIP ro'yxati":
 			showUserListPro(bot, chatID, b.Id, true, false)
 			return
 
-		case "📋 Blok ro'yxati":
+		case "📋 Blok ro'yxati", "Blok ro'yxati":
 			showUserListPro(bot, chatID, b.Id, false, true)
 			return
 
-		case "⛔ Blok qo'shish":
+		case "⛔ Blok qo'shish", "Blok qo'shish":
 			startBlockAddPro(bot, chatID, userID)
 			return
 
-		case "✅ Blok o'chirish":
+		case "✅ Blok o'chirish", "Blok o'chirish":
 			startBlockRemovePro(bot, chatID, userID)
 			return
 
-		case "⬅️ Orqaga":
-			showAdminPanelPro(bot, chatID)
+		case "⬅️ Orqaga", "Orqaga":
+			if b.BotType.Code == "animepro" {
+				showAdminPanelPropr(bot, chatID)
+			} else {
+				showAdminPanelPro(bot, chatID)
+			}
 			return
 
-		case "📬 Reklama yuborish":
-			startBroadcastPro(bot, chatID)
+		case "📬 Reklama yuborish", "Reklama yuborish":
+			if b.BotType.Code == "animepro" {
+				startBroadcastPropr(bot, chatID)
+			} else {
+				startBroadcastPro(bot, chatID)
+			}
 			return
 
-		case "👥 Hammaga":
+		case "👥 Hammaga", "Hammaga":
 			mu.Lock()
 			adminState[userID] = "waiting_broadcast_message:all"
 			mu.Unlock()
 			sendUserBot(bot, chatID, "✉️ Endi yubormoqchi bo'lgan xabarni jo'nating (matn, rasm, video yoki forward qilingan xabar):")
 			return
 
-		case "⭐ VIP'larga":
+		case "⭐ VIP'larga", "VIP'larga":
 			mu.Lock()
 			adminState[userID] = "waiting_broadcast_message:vip"
 			mu.Unlock()
 			sendUserBot(bot, chatID, "✉️ Endi yubormoqchi bo'lgan xabarni jo'nating (matn, rasm, video yoki forward qilingan xabar):")
 			return
 
-		case "👤 Oddiylarga":
+		case "👤 Oddiylarga", "Oddiylarga":
 			mu.Lock()
 			adminState[userID] = "waiting_broadcast_message:regular"
 			mu.Unlock()
 			sendUserBot(bot, chatID, "✉️ Endi yubormoqchi bo'lgan xabarni jo'nating (matn, rasm, video yoki forward qilingan xabar):")
 			return
 
-		case "➕ Admin qo'shish":
+		case "➕ Admin qo'shish", "Admin qo'shish":
 			startAdminAddPro(bot, chatID, userID)
 			return
-		case "➖ Admin o'chirish":
+
+		case "➖ Admin o'chirish", "Admin o'chirish":
 			showAdminsListPro(bot, b, chatID)
 			return
-		case "📋 Adminlar ro'yxati":
+
+		case "📋 Adminlar ro'yxati", "Adminlar ro'yxati":
 			showAdminsListPro(bot, b, chatID)
 			return
 
@@ -283,17 +322,32 @@ func HandleAnimeBotMessagePro(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *t
 			sendUserBot(bot, chatID, "💡 Hozirda faol yuklash jarayoni mavjud emas.")
 			return
 
-		case "📊 Statistika":
+		case "📊 Statistika", "Statistika":
 			showStatisticsPro(bot, b, chatID)
 			return
-		case "📤 Anime sozlash":
-			startAnimeyuklashPro(bot, chatID)
+
+		case "📤 Anime sozlash", "Anime sozlash":
+			if b.BotType.Code == "animepro" {
+				startAnimeyuklashPropr(bot, chatID)
+			} else {
+				startAnimeyuklashPro(bot, chatID)
+			}
 			return
-		case "📢 Kanallarni sozlash":
-			showAdminsPanelPro(bot, chatID)
+
+		case "📢 Kanallarni sozlash", "Kanallarni sozlash":
+			if b.BotType.Code == "animepro" {
+				showAdminsPanelPropr(bot, chatID)
+			} else {
+				showAdminsPanelPro(bot, chatID)
+			}
 			return
-		case "🗄 Asosiy sozlamalar":
-			showAsosiyPanelPro(bot, chatID)
+
+		case "🗄 Asosiy sozlamalar", "Asosiy sozlamalar":
+			if b.BotType.Code == "animepro" {
+				showAsosiyPanelPropr(bot, chatID)
+			} else {
+				showAsosiyPanelPro(bot, chatID)
+			}
 			return
 
 		default:
@@ -301,7 +355,6 @@ func HandleAnimeBotMessagePro(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *t
 			//	sendUserBot(bot, chatID, "/admin")
 			//	return
 			//}
-
 		}
 	}
 	if !botUser.IsVip && !CheckSubscription(bot, b, userID) {
@@ -444,8 +497,6 @@ func RouteQuickAnimeStatePro(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tg
 		reply := tgbotapi.NewMessage(chatID, text)
 		reply.ParseMode = "Markdown"
 		bot.Send(reply)
-
-		showAdminPanelPro(bot, chatID)
 		return true
 	}
 
@@ -461,6 +512,7 @@ func generateRandomCodePro(n int) string {
 	return string(b)
 }
 
+// odi
 func showAdminPanelPro(bot *tgbotapi.BotAPI, chatID int64) {
 	keyboard := tgbotapi.NewReplyKeyboard(
 		tgbotapi.NewKeyboardButtonRow(
@@ -473,15 +525,18 @@ func showAdminPanelPro(bot *tgbotapi.BotAPI, chatID int64) {
 		),
 		tgbotapi.NewKeyboardButtonRow(
 			tgbotapi.NewKeyboardButton("🗄 Asosiy sozlamalar"),
-		), tgbotapi.NewKeyboardButtonRow(
+		),
+		tgbotapi.NewKeyboardButtonRow(
 			tgbotapi.NewKeyboardButton("📬 Reklama yuborish"),
 		),
 	)
 
 	msg := tgbotapi.NewMessage(chatID, "admin")
 	msg.ReplyMarkup = keyboard
-	msg.ParseMode = "Markdown"
-	bot.Send(msg)
+
+	if _, err := bot.Send(msg); err != nil {
+		log.Printf("🔴 showAdminPanel: xabar yuborishda xatolik: %v", err)
+	}
 }
 
 func showUsersPanelPro(bot *tgbotapi.BotAPI, chatID int64) {
@@ -505,10 +560,12 @@ func showUsersPanelPro(bot *tgbotapi.BotAPI, chatID int64) {
 		),
 	)
 
-	msg := tgbotapi.NewMessage(chatID, "👥 *Foydalanuvchilarni boshqarish*\n\nKerakli amalni tanlang:")
-	msg.ParseMode = "Markdown"
+	msg := tgbotapi.NewMessage(chatID, "👥 Foydalanuvchilarni boshqarish\n\nKerakli amalni tanlang:")
 	msg.ReplyMarkup = keyboard
-	bot.Send(msg)
+
+	if _, err := bot.Send(msg); err != nil {
+		log.Printf("🔴 showUsersPanel: xabar yuborishda xatolik: %v", err)
+	}
 }
 
 func startBroadcastPro(bot *tgbotapi.BotAPI, chatID int64) {
@@ -525,67 +582,53 @@ func startBroadcastPro(bot *tgbotapi.BotAPI, chatID int64) {
 		),
 	)
 
-	msg := tgbotapi.NewMessage(chatID, "📢 *Reklama yuborish*\n\nKimlarga yuborilsin?")
-	msg.ParseMode = "Markdown"
+	msg := tgbotapi.NewMessage(chatID, "📢 Reklama yuborish\n\nKimlarga yuborilsin?")
 	msg.ReplyMarkup = keyboard
-	bot.Send(msg)
+
+	if _, err := bot.Send(msg); err != nil {
+		log.Printf("🔴 startBroadcast: xabar yuborishda xatolik: %v", err)
+	}
 }
 
 func startAnimeyuklashPro(bot *tgbotapi.BotAPI, chatID int64) {
 	keyboard := tgbotapi.NewReplyKeyboard(
-
 		tgbotapi.NewKeyboardButtonRow(
 			tgbotapi.NewKeyboardButton("➕ Anime joylash"),
-			tgbotapi.NewKeyboardButton("🗑 Animeni o‘chirish"),
-		), tgbotapi.NewKeyboardButtonRow(
+			tgbotapi.NewKeyboardButton("🗑 Animeni o'chirish"),
+		),
+		tgbotapi.NewKeyboardButtonRow(
 			tgbotapi.NewKeyboardButton("✏️ Animeni tahrirlash"),
 			tgbotapi.NewKeyboardButton("🎬 qismli anime joylash"),
-		), tgbotapi.NewKeyboardButtonRow(
+		),
+		tgbotapi.NewKeyboardButtonRow(
 			tgbotapi.NewKeyboardButton("⬅️ Orqaga"),
-		))
+		),
+	)
 
-	msg := tgbotapi.NewMessage(chatID, "📋 Quyidagiladan birini tanlang")
-	msg.ParseMode = "Markdown"
+	msg := tgbotapi.NewMessage(chatID, "📋 Quyidagilardan birini tanlang")
 	msg.ReplyMarkup = keyboard
-	bot.Send(msg)
+
+	if _, err := bot.Send(msg); err != nil {
+		log.Printf("🔴 startAnimeyuklash: xabar yuborishda xatolik: %v", err)
+	}
 }
 
 func showAdminsPanelPro(bot *tgbotapi.BotAPI, chatID int64) {
 	keyboard := tgbotapi.NewReplyKeyboard(
-
 		tgbotapi.NewKeyboardButtonRow(
 			tgbotapi.NewKeyboardButton("➕ Kanal qo‘shish"),
-			tgbotapi.NewKeyboardButton("➖ Kanal o‘chirish"),
-		),
-		tgbotapi.NewKeyboardButtonRow(
-			tgbotapi.NewKeyboardButton("⬅️ Orqaga"),
-		),
-	)
-
-	msg := tgbotapi.NewMessage(chatID, "📢 Kanallarni sozlash  boshqarish\n\nKerakli amalni tanlang:")
-	msg.ParseMode = "Markdown"
-	msg.ReplyMarkup = keyboard
-	bot.Send(msg)
-}
-
-func showAsosiyPanelPro(bot *tgbotapi.BotAPI, chatID int64) {
-	keyboard := tgbotapi.NewReplyKeyboard(
-
-		tgbotapi.NewKeyboardButtonRow(
-			tgbotapi.NewKeyboardButton("✍️ Matn sozlash"),
-			tgbotapi.NewKeyboardButton("💎 vip sozlash"),
-		),
-		tgbotapi.NewKeyboardButtonRow(
-			tgbotapi.NewKeyboardButton("📢 Reklama sozlash"),
+			tgbotapi.NewKeyboardButton("➖ Kanal o'chirish"),
 		), tgbotapi.NewKeyboardButtonRow(
 			tgbotapi.NewKeyboardButton("⬅️ Orqaga"),
 		),
 	)
 
-	msg := tgbotapi.NewMessage(chatID, "Kerakli amalni tanlang:")
-	msg.ParseMode = "Markdown"
+	msg := tgbotapi.NewMessage(chatID, "Quyidagilardan birini tanlang")
 	msg.ReplyMarkup = keyboard
-	bot.Send(msg)
+
+	if _, err := bot.Send(msg); err != nil {
+		log.Printf("🔴 startAnimeyuklash: xabar yuborishda xatolik: %v", err)
+	}
 }
 
 func showkanalPanelPro(bot *tgbotapi.BotAPI, chatID int64) {
@@ -605,6 +648,28 @@ func showkanalPanelPro(bot *tgbotapi.BotAPI, chatID int64) {
 	msg.ParseMode = "Markdown"
 	msg.ReplyMarkup = keyboard
 	bot.Send(msg)
+}
+
+func showAsosiyPanelPro(bot *tgbotapi.BotAPI, chatID int64) {
+	keyboard := tgbotapi.NewReplyKeyboard(
+		tgbotapi.NewKeyboardButtonRow(
+			tgbotapi.NewKeyboardButton("✍️ Matn sozlash"),
+			tgbotapi.NewKeyboardButton("💎 vip sozlash"),
+		),
+		tgbotapi.NewKeyboardButtonRow(
+			tgbotapi.NewKeyboardButton("📢 Reklama sozlash"),
+		),
+		tgbotapi.NewKeyboardButtonRow(
+			tgbotapi.NewKeyboardButton("⬅️ Orqaga"),
+		),
+	)
+
+	msg := tgbotapi.NewMessage(chatID, "Kerakli amalni tanlang:")
+	msg.ReplyMarkup = keyboard
+
+	if _, err := bot.Send(msg); err != nil {
+		log.Printf("🔴 showAsosiyPanel: xabar yuborishda xatolik: %v", err)
+	}
 }
 
 func showVIPPanelPro(bot *tgbotapi.BotAPI, chatID int64) {
@@ -635,6 +700,243 @@ func showVIPPanelPro(bot *tgbotapi.BotAPI, chatID int64) {
 	msg.ReplyMarkup = keyboard
 	bot.Send(msg)
 }
+
+// pr
+func showUsersPanelPropr(bot *tgbotapi.BotAPI, chatID int64) {
+	keyboardJSON := `{
+		"keyboard": [
+			[
+				{"text": "Blok qo'shish", "icon_custom_emoji_id": "5944970130554359187"},
+				{"text": "Blok o'chirish", "icon_custom_emoji_id": "5922612721244704425"}
+			],
+			[
+				{"text": "Blok ro'yxati", "icon_custom_emoji_id": "5942877472163892475"}
+			],
+			[
+				{"text": "Admin qo'shish", "icon_custom_emoji_id": "5920090136627908485"},
+				{"text": "Admin o'chirish", "icon_custom_emoji_id": "5886496611835581345"}
+			],
+			[
+				{"text": "Adminlar ro'yxati", "icon_custom_emoji_id": "5942877472163892475"}
+			],
+			[
+				{"text": "Orqaga", "icon_custom_emoji_id": "5877629862306385808"}
+			]
+		],
+		"resize_keyboard": true
+	}`
+
+	params := tgbotapi.Params{}
+	params.AddNonEmpty("chat_id", strconv.FormatInt(chatID, 10))
+	params.AddNonEmpty("text", "👥 Foydalanuvchilarni boshqarish\n\nKerakli amalni tanlang:")
+	params.AddNonEmpty("reply_markup", keyboardJSON)
+
+	if _, err := bot.MakeRequest("sendMessage", params); err != nil {
+		log.Printf("🔴 showUsersPanelPro: xabar yuborishda xatolik: %v", err)
+	}
+}
+
+func startBroadcastPropr(bot *tgbotapi.BotAPI, chatID int64) {
+	keyboardJSON := `{
+		"keyboard": [
+			[
+				{"text": "Hammaga", "icon_custom_emoji_id": "5942877472163892475"}
+			],
+			[
+				{"text": "VIP'larga", "icon_custom_emoji_id": "5920090136627908485"},
+				{"text": "Oddiylarga", "icon_custom_emoji_id": "5920344347152224466"}
+			],
+			[
+				{"text": "Orqaga", "icon_custom_emoji_id": "5877629862306385808"}
+			]
+		],
+		"resize_keyboard": true
+	}`
+
+	params := tgbotapi.Params{}
+	params.AddNonEmpty("chat_id", strconv.FormatInt(chatID, 10))
+	params.AddNonEmpty("text", "📢 Reklama yuborish\n\nKimlarga yuborilsin?")
+	params.AddNonEmpty("reply_markup", keyboardJSON)
+
+	if _, err := bot.MakeRequest("sendMessage", params); err != nil {
+		log.Printf("🔴 startBroadcastPro: xabar yuborishda xatolik: %v", err)
+	}
+}
+
+func showAdminPanelPropr(bot *tgbotapi.BotAPI, chatID int64) {
+	keyboardJSON := `{
+		"keyboard": [
+			[
+				{"text": "Statistika", "icon_custom_emoji_id": "6006038041448156880"},
+				{"text": "Foydalanuvchilar", "icon_custom_emoji_id": "5886412370347036129"}
+			],
+			[
+				{"text": "Anime sozlash", "icon_custom_emoji_id": "5877260593903177342"},
+				{"text": "Kanallarni sozlash", "icon_custom_emoji_id": "5988023995125993550"}
+			],
+			[
+				{"text": "Asosiy sozlamalar", "icon_custom_emoji_id": "5963312935148195483"}
+			],
+			[
+				{"text": "Reklama yuborish", "icon_custom_emoji_id": "5967280668885913944"}
+			]
+		],
+		"resize_keyboard": true
+	}`
+
+	params := tgbotapi.Params{}
+	params.AddNonEmpty("chat_id", strconv.FormatInt(chatID, 10))
+	params.AddNonEmpty("text", "admin")
+	params.AddNonEmpty("reply_markup", keyboardJSON)
+
+	if _, err := bot.MakeRequest("sendMessage", params); err != nil {
+		log.Printf("🔴 showAdminPanelPro: xabar yuborishda xatolik: %v", err)
+	}
+}
+
+func startAnimeyuklashPropr(bot *tgbotapi.BotAPI, chatID int64) {
+	keyboardJSON := `{
+		"keyboard": [
+			[
+				{"text": "Anime joylash", "icon_custom_emoji_id": "5877307202888273539"},
+				{"text": "Animeni o'chirish", "icon_custom_emoji_id": "5879896690210639947"}
+			],
+			[
+				{"text": "Animeni tahrirlash", "icon_custom_emoji_id": "5879841310902324730"},
+				{"text": "qismli anime joylash", "icon_custom_emoji_id": "5994636050033545139"}
+			],
+			[
+				{"text": "Orqaga", "icon_custom_emoji_id": "5877629862306385808"}
+			]
+		],
+		"resize_keyboard": true
+	}`
+
+	params := tgbotapi.Params{}
+	params.AddNonEmpty("chat_id", strconv.FormatInt(chatID, 10))
+	params.AddNonEmpty("text", " Quyidagilardan birini tanlang")
+	params.AddNonEmpty("reply_markup", keyboardJSON)
+
+	if _, err := bot.MakeRequest("sendMessage", params); err != nil {
+		log.Printf("🔴 startAnimeyuklashPro: xabar yuborishda xatolik: %v", err)
+	}
+}
+
+func showkanalPanelPropr(bot *tgbotapi.BotAPI, chatID int64) {
+	keyboardJSON := `{
+		"keyboard": [
+			[
+				{"text": "Kanalga reklama yuborish", "icon_custom_emoji_id": "5771695636411847302"},
+				{"text": "Kanal qo‘shish", "icon_custom_emoji_id": "5771868281212245617"}
+			],
+			[
+				{"text": "Kanal o'chirish", "icon_custom_emoji_id": "5771511103141975115"}
+			],[
+				{"text": "Orqaga", "icon_custom_emoji_id": "5877629862306385808"}
+			]
+		],
+		"resize_keyboard": true
+	}`
+
+	params := tgbotapi.Params{}
+	params.AddNonEmpty("chat_id", strconv.FormatInt(chatID, 10))
+	params.AddNonEmpty("text", "Kerakli amalni tanlang:")
+	params.AddNonEmpty("parse_mode", "HTML")
+	params.AddNonEmpty("reply_markup", keyboardJSON)
+
+	if _, err := bot.MakeRequest("sendMessage", params); err != nil {
+		log.Printf("🔴 showAsosiyPanelPro: xabar yuborishda xatolik: %v", err)
+	}
+}
+
+func showAsosiyPanelPropr(bot *tgbotapi.BotAPI, chatID int64) {
+	keyboardJSON := `{
+		"keyboard": [
+			[
+				{"text": "Matn sozlash", "icon_custom_emoji_id": "5764779661028495989"},
+				{"text": "vip sozlash", "icon_custom_emoji_id": "5807465992363710697"}
+			],
+			[
+				{"text": "Reklama sozlash", "icon_custom_emoji_id": "5771695636411847302"}
+			],
+			[
+				{"text": "Orqaga", "icon_custom_emoji_id": "5877629862306385808"}
+			]
+		],
+		"resize_keyboard": true
+	}`
+
+	params := tgbotapi.Params{}
+	params.AddNonEmpty("chat_id", strconv.FormatInt(chatID, 10))
+	params.AddNonEmpty("text", "Kerakli amalni tanlang:")
+	params.AddNonEmpty("parse_mode", "HTML")
+	params.AddNonEmpty("reply_markup", keyboardJSON)
+
+	if _, err := bot.MakeRequest("sendMessage", params); err != nil {
+		log.Printf("🔴 showAsosiyPanelPro: xabar yuborishda xatolik: %v", err)
+	}
+}
+
+func showAdminsPanelPropr(bot *tgbotapi.BotAPI, chatID int64) {
+	keyboardJSON := `{
+		"keyboard": [
+			[
+				{"text": "Kanall qo‘shish", "icon_custom_emoji_id": "5771868281212245617"},
+				{"text": "Kanall o'chirish", "icon_custom_emoji_id": "5771511103141975115"}
+			],
+			[
+				{"text": "Orqaga", "icon_custom_emoji_id": "5877629862306385808"}
+			]
+		],
+		"resize_keyboard": true
+	}`
+
+	params := tgbotapi.Params{}
+	params.AddNonEmpty("chat_id", strconv.FormatInt(chatID, 10))
+	params.AddNonEmpty("text", "📢 Kanallarni sozlash / boshqarish\n\nKerakli amalni tanlang:")
+	params.AddNonEmpty("reply_markup", keyboardJSON)
+
+	if _, err := bot.MakeRequest("sendMessage", params); err != nil {
+		log.Printf("🔴 showAdminsPanelPro: xabar yuborishda xatolik: %v", err)
+	}
+}
+
+func showVIPPanelPropr(bot *tgbotapi.BotAPI, chatID int64) {
+	keyboardJSON := `{
+		"keyboard": [
+			[
+				{"text": "vip narx qo'shish", "icon_custom_emoji_id": "5807465992363710697"},
+				{"text": "VIP narxni o'chirish", "icon_custom_emoji_id": "5807465992363710697"}
+			],
+			[
+				{"text": "VIP narxni tahrirlash", "icon_custom_emoji_id": "5879841310902324730"}
+			],
+			[
+				{"text": "VIP ro'yxati", "icon_custom_emoji_id": "5942877472163892475"}
+			],
+			[
+				{"text": "VIP qo'shish", "icon_custom_emoji_id": "5920090136627908485"},
+				{"text": "VIP o'chirish", "icon_custom_emoji_id": "5886496611835581345"}
+			],
+			[
+				{"text": "Orqaga", "icon_custom_emoji_id": "5877629862306385808"}
+			]
+		],
+		"resize_keyboard": true
+	}`
+
+	params := tgbotapi.Params{}
+	params.AddNonEmpty("chat_id", strconv.FormatInt(chatID, 10))
+	params.AddNonEmpty("text", "Kerakli amalni tanlang:")
+	params.AddNonEmpty("parse_mode", "HTML")
+	params.AddNonEmpty("reply_markup", keyboardJSON)
+
+	if _, err := bot.MakeRequest("sendMessage", params); err != nil {
+		log.Printf("🔴 showVIPPanelPropr: xabar yuborishda xatolik: %v", err)
+	}
+}
+
+//qolgani
 
 func showBotNoteMenuPro(bot *tgbotapi.BotAPI, b *models.CreatedBot, chatID int64, userID int64) {
 	// Har safar bazadan eng so'nggi qiymatni olamiz — chunki delete_bot_note/edit_bot_note
@@ -1117,7 +1419,6 @@ func RouteBotSettingsStatePro(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *t
 
 		b.Note = newNote
 		sendUserBot(bot, chatID, "✅ Matn muvaffaqiyatli tahrirlandi!")
-		showAsosiyPanelPro(bot, chatID)
 		return true
 	}
 
@@ -1225,7 +1526,6 @@ func RouteAnimeEditStatePro(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgb
 		mu.Unlock()
 
 		sendUserBot(bot, chatID, fmt.Sprintf("✅ \"%s\" anime butunlay o'chirildi!", animeName))
-		showAdminPanelPro(bot, chatID)
 		return true
 	}
 	if strings.HasPrefix(state, "waiting_new_code:") {
@@ -1242,7 +1542,6 @@ func RouteAnimeEditStatePro(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgb
 		mu.Unlock()
 
 		sendUserBot(bot, chatID, "✅ Anime kodi muvaffaqiyatli o'zgartirildi!")
-		showAdminPanelPro(bot, chatID)
 		return true
 	}
 
@@ -1259,7 +1558,6 @@ func RouteAnimeEditStatePro(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgb
 		mu.Unlock()
 
 		sendUserBot(bot, chatID, "✅ Anime nomi muvaffaqiyatli o'zgartirildi!")
-		showAdminPanelPro(bot, chatID)
 		return true
 	}
 
@@ -1310,7 +1608,6 @@ func RouteAnimeEditStatePro(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgb
 			mu.Unlock()
 
 			sendUserBot(bot, chatID, fmt.Sprintf("✅ Yangi %d-qism muvaffaqiyatli qo'shildi!", newPartOrder))
-			showAdminPanelPro(bot, chatID)
 		}
 		return true
 	}
@@ -1369,7 +1666,6 @@ func RouteAnimeEditStatePro(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgb
 		mu.Unlock()
 
 		sendUserBot(bot, chatID, fmt.Sprintf("✅ %d-qism muvaffaqiyatli o'chirildi!\nQolgan qismlar qayta raqamlandi.", partNum))
-		showAdminPanelPro(bot, chatID)
 		return true
 	}
 	if strings.HasPrefix(state, "waiting_new_photo:") {
@@ -1390,7 +1686,6 @@ func RouteAnimeEditStatePro(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgb
 		mu.Unlock()
 
 		sendUserBot(bot, chatID, "✅ Anime bosh sahifa surati muvaffaqiyatli o'zgartirildi!")
-		showAdminPanelPro(bot, chatID)
 		return true
 	}
 
@@ -1489,7 +1784,7 @@ func RouteUserManagementStatePro(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg
 	if state == "waiting_admin_add" {
 		tgID, err := strconv.ParseInt(strings.TrimSpace(msg.Text), 10, 64)
 		if err != nil {
-			sendUserBot(bot, chatID, "❌ Noto'g'ri ID. Faqat raqam kiriting:")
+			sendUserBot(bot, chatID, "❌ Noto'g'ri ID. Faqat raqam kiriting:\n\n /admin")
 			return true
 		}
 
@@ -1513,7 +1808,6 @@ func RouteUserManagementStatePro(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg
 		mu.Lock()
 		delete(adminState, userID)
 		mu.Unlock()
-		showAdminsPanelPro(bot, chatID)
 		return true
 
 	}
@@ -1521,7 +1815,7 @@ func RouteUserManagementStatePro(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg
 	if state == "waiting_admin_remove" {
 		tgID, err := strconv.ParseInt(strings.TrimSpace(msg.Text), 10, 64)
 		if err != nil {
-			sendUserBot(bot, chatID, "❌ Noto'g'ri ID. Faqat raqam kiriting:")
+			sendUserBot(bot, chatID, "❌ Noto'g'ri ID. Faqat raqam kiriting:\n\n /admin")
 			return true
 		}
 
@@ -1530,7 +1824,6 @@ func RouteUserManagementStatePro(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg
 			mu.Lock()
 			delete(adminState, userID)
 			mu.Unlock()
-			showAdminsPanelPro(bot, chatID)
 			return true
 		}
 
@@ -1551,14 +1844,13 @@ func RouteUserManagementStatePro(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg
 		mu.Lock()
 		delete(adminState, userID)
 		mu.Unlock()
-		showAdminsPanelPro(bot, chatID)
 		return true
 	}
 
 	if state == "waiting_vip_add" {
 		tgID, err := strconv.ParseInt(strings.TrimSpace(msg.Text), 10, 64)
 		if err != nil {
-			sendUserBot(bot, chatID, "❌ Noto'g'ri ID. Faqat raqam kiriting:")
+			sendUserBot(bot, chatID, "❌ Noto'g'ri ID. Faqat raqam kiriting:\n\n /admin")
 			return true
 		}
 
@@ -1586,7 +1878,7 @@ func RouteUserManagementStatePro(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg
 	if state == "waiting_vip_remove" {
 		tgID, err := strconv.ParseInt(strings.TrimSpace(msg.Text), 10, 64)
 		if err != nil {
-			sendUserBot(bot, chatID, "❌ Noto'g'ri ID. Faqat raqam kiriting:")
+			sendUserBot(bot, chatID, "❌ Noto'g'ri ID. Faqat raqam kiriting:\n\n /admin")
 			return true
 		}
 
@@ -1614,7 +1906,7 @@ func RouteUserManagementStatePro(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg
 	if state == "waiting_block_add" {
 		tgID, err := strconv.ParseInt(strings.TrimSpace(msg.Text), 10, 64)
 		if err != nil {
-			sendUserBot(bot, chatID, "❌ Noto'g'ri ID. Faqat raqam kiriting:")
+			sendUserBot(bot, chatID, "❌ Noto'g'ri ID. Faqat raqam kiriting:\n\n /admin")
 			return true
 		}
 
@@ -1642,7 +1934,7 @@ func RouteUserManagementStatePro(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg
 	if state == "waiting_block_remove" {
 		tgID, err := strconv.ParseInt(strings.TrimSpace(msg.Text), 10, 64)
 		if err != nil {
-			sendUserBot(bot, chatID, "❌ Noto'g'ri ID. Faqat raqam kiriting:")
+			sendUserBot(bot, chatID, "❌ Noto'g'ri ID. Faqat raqam kiriting:\n\n /admin")
 			return true
 		}
 
@@ -1832,7 +2124,6 @@ func RunBroadcastPro(bot *tgbotapi.BotAPI, b *models.CreatedBot, srcMsg *tgbotap
 	resultMsg.ParseMode = "Markdown"
 	bot.Send(resultMsg)
 
-	showAdminPanelPro(bot, chatID)
 }
 
 func startAdminAddPro(bot *tgbotapi.BotAPI, chatID int64, userID int64) {
@@ -2415,9 +2706,7 @@ func HandlePromoChannelAdd(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgbo
 		sendUserBot(
 			bot,
 			chatID,
-			"❌ Kanal ID sini yuboring.\n\n"+
-				"Masalan:\n"+
-				"`-1001234567890`",
+			"Kanal ID sini yuboring.\n\n /admin",
 		)
 		return
 	}
@@ -2427,9 +2716,7 @@ func HandlePromoChannelAdd(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgbo
 		sendUserBot(
 			bot,
 			chatID,
-			"❌ Kanal ID noto‘g‘ri.\n\n"+
-				"To‘g‘ri format:\n"+
-				"`-1001234567890`",
+			"Kanal ID noto‘g‘ri.\n\n /admin",
 		)
 		return
 	}
@@ -2448,7 +2735,7 @@ func HandlePromoChannelAdd(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgbo
 				"Tekshiring:\n"+
 				"1️⃣ Bot kanalga admin qilib qo‘shilganmi?\n"+
 				"2️⃣ Kanal ID to‘g‘rimi?\n"+
-				"3️⃣ Kanal ID `-100...` bilan boshlanganmi?",
+				"3️⃣ Kanal ID `-100...` bilan boshlanganmi?\n\n /admin",
 		)
 		return
 	}
@@ -2457,7 +2744,7 @@ func HandlePromoChannelAdd(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgbo
 		sendUserBot(
 			bot,
 			chatID,
-			"❌ Bu ID kanalga tegishli emas.",
+			"❌ Bu ID kanalga tegishli emas.\n /admin",
 		)
 		return
 	}
@@ -2793,7 +3080,7 @@ func HandleAdCreationSteps(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgbo
 			sendUserBot(
 				bot,
 				chatID,
-				"❌ Noto‘g‘ri format!\n\nIltimos, faqat **Rasm** yoki **Video** yuboring.",
+				"❌ Noto‘g‘ri format!\n\nIltimos, faqat Rasm    yoki   Video yuboring.\n\n /admin",
 			)
 			return true
 		}

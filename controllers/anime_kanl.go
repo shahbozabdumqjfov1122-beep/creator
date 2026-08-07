@@ -60,10 +60,13 @@ func parseChannelID(bot *tgbotapi.BotAPI, msg *tgbotapi.Message) (int64, error) 
 func HandleAdminCommands(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgbotapi.Message) {
 	userID := msg.From.ID
 
-	if msg.Text == "/addchannel" || msg.Text == "➕ Kanal qo‘shish" {
+	log.Printf("🟣 [HandleAdminCommands] boshlandi. UserID=%d, BotID=%d, Text=%q", userID, b.Id, msg.Text)
+
+	if msg.Text == "/addchannel" || msg.Text == "➕ Kanal qo‘shish" || msg.Text == "Kanall qo‘shish" {
 		mu.Lock()
 		adminState[userID] = "wait_channel"
 		mu.Unlock()
+		log.Printf("🟢 [HandleAdminCommands] state='wait_channel' o'rnatildi. UserID=%d", userID)
 		sendUserBot(bot, msg.Chat.ID, "📢 Kanal ID yoki @username yuboring...")
 		return
 	}
@@ -72,6 +75,7 @@ func HandleAdminCommands(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgbota
 		mu.Lock()
 		adminState[userID] = "wait_vip_name"
 		mu.Unlock()
+		log.Printf("🟢 [HandleAdminCommands] state='wait_vip_name' o'rnatildi. UserID=%d", userID)
 		sendUserBot(bot, msg.Chat.ID, "tarif nomini yuboring.\nMasalan: 1 oylik obuna")
 		return
 	}
@@ -81,12 +85,19 @@ func HandleAdminCommands(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgbota
 	mu.Unlock()
 
 	if !hasState {
+		log.Printf("🟡 [HandleAdminCommands] UserID=%d uchun state topilmadi. Chiqib ketilmoqda.", userID)
 		return
 	}
+
+	log.Printf("🔵 [HandleAdminCommands] joriy state=%q, UserID=%d", state, userID)
+
 	switch state {
 	case "wait_channel":
+		log.Printf("🟣 [wait_channel] parseChannelID chaqirilmoqda. Text=%q", msg.Text)
 		channelID, err := parseChannelID(bot, msg)
 		if err != nil {
+			log.Printf("🔴 [wait_channel] parseChannelID xatosi: %v", err)
+
 			// 🎯 FIX: Admin xato matn yuborganida statelarni tozalaymiz, bot tiqilib qolmaydi!
 			mu.Lock()
 			delete(adminState, userID)
@@ -98,8 +109,11 @@ func HandleAdminCommands(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgbota
 			} else {
 				sendUserBot(bot, msg.Chat.ID, "❌ Kanal topilmadi yoki bot u yerda admin emas! Jarayon bekor qilindi.")
 			}
-
+			log.Printf("🟡 [wait_channel] state tozalandi, jarayon bekor qilindi. UserID=%d", userID)
+			return
 		}
+
+		log.Printf("🟢 [wait_channel] channelID topildi: %d", channelID)
 
 		// Agar hammasi to'g'ri bo'lsa, keyingi qadamga o'tadi...
 		mu.Lock()
@@ -107,12 +121,16 @@ func HandleAdminCommands(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgbota
 		adminState[userID] = "wait_link"
 		mu.Unlock()
 
+		log.Printf("🟢 [wait_channel] state='wait_link' ga o'tkazildi. UserID=%d, channelID=%d", userID, channelID)
 		sendUserBot(bot, msg.Chat.ID, "🔗 Endi kanal uchun Invite link yuboring (https://t.me/....)")
 		return
 
 	case "wait_link":
 		link := strings.TrimSpace(msg.Text)
+		log.Printf("🟣 [wait_link] link qabul qilindi: %q", link)
+
 		if link == "" || !strings.HasPrefix(link, "http") {
+			log.Printf("🔴 [wait_link] noto'g'ri link format: %q", link)
 			sendUserBot(bot, msg.Chat.ID, "❌ Iltimos, to'g'ri havola (link) yuboring!")
 			return
 		}
@@ -120,6 +138,8 @@ func HandleAdminCommands(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgbota
 		mu.Lock()
 		channelID := adminTempChannel[userID]
 		mu.Unlock()
+
+		log.Printf("🔵 [wait_link] bazaga yozilmoqda. channelID=%d, link=%q, BotID=%d", channelID, link, b.Id)
 
 		o := orm.NewOrm()
 
@@ -133,19 +153,26 @@ func HandleAdminCommands(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgbota
 
 		_, err := o.Insert(&bc)
 		if err != nil {
+			log.Printf("🔴 [wait_link] bazaga saqlashda xatolik: %v", err)
 			sendUserBot(bot, msg.Chat.ID, "❌ Ma'lumotlar bazasiga saqlashda xato yuz berdi.")
 			return
 		}
 
+		log.Printf("✅ [wait_link] Kanal muvaffaqiyatli qo'shildi! channelID=%d, BotID=%d", channelID, b.Id)
 		sendUserBot(bot, msg.Chat.ID, fmt.Sprintf("✅ Kanal muvaffaqiyatli qo‘shildi!\n📢 ID: %d", channelID))
 
 		mu.Lock()
 		delete(adminState, userID)
 		delete(adminTempChannel, userID)
 		mu.Unlock()
+		log.Printf("🏁 [wait_link] state va tempChannel tozalandi. UserID=%d", userID)
+
 	case "wait_vip_name":
 		name := strings.TrimSpace(msg.Text)
+		log.Printf("🟣 [wait_vip_name] nom qabul qilindi: %q", name)
+
 		if name == "" {
+			log.Printf("🔴 [wait_vip_name] nom bo'sh")
 			sendUserBot(bot, msg.Chat.ID, "❌ Nom bo'sh bo'lishi mumkin emas. Qaytadan yuboring.")
 			return
 		}
@@ -155,12 +182,16 @@ func HandleAdminCommands(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgbota
 		adminState[userID] = "wait_vip_price"
 		mu.Unlock()
 
+		log.Printf("🟢 [wait_vip_name] state='wait_vip_price' ga o'tdi. name=%q, UserID=%d", name, userID)
 		sendUserBot(bot, msg.Chat.ID, "Endi shu tarif uchun narxni yuboring.\nMasalan: 15 000 so'm")
 		return
 
 	case "wait_vip_price":
 		price := strings.TrimSpace(msg.Text)
+		log.Printf("🟣 [wait_vip_price] narx qabul qilindi: %q", price)
+
 		if price == "" {
+			log.Printf("🔴 [wait_vip_price] narx bo'sh")
 			sendUserBot(bot, msg.Chat.ID, "❌ Narx bo'sh bo'lishi mumkin emas. Qaytadan yuboring.")
 			return
 		}
@@ -171,9 +202,12 @@ func HandleAdminCommands(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgbota
 		delete(adminState, userID)
 		mu.Unlock()
 
+		log.Printf("🔵 [wait_vip_price] bazadan bot o'qilmoqda. BotID=%d", b.Id)
+
 		o := orm.NewOrm()
 		createdBot := models.CreatedBot{Id: b.Id}
 		if err := o.Read(&createdBot); err != nil {
+			log.Printf("🔴 [wait_vip_price] bot o'qishda xatolik: %v", err)
 			sendUserBot(bot, msg.Chat.ID, "❌ Bot ma'lumotini o'qishda xato.")
 			return
 		}
@@ -181,20 +215,29 @@ func HandleAdminCommands(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgbota
 		newLine := fmt.Sprintf("💎 VIP Obuna Tariflari\n\n %s - %s\n", name, price)
 		createdBot.VipPrices += newLine
 
+		log.Printf("🔵 [wait_vip_price] yangi qator qo'shilmoqda: %q", newLine)
+
 		if _, err := o.Update(&createdBot, "VipPrices"); err != nil {
+			log.Printf("🔴 [wait_vip_price] saqlashda xatolik: %v", err)
 			sendUserBot(bot, msg.Chat.ID, "❌ Saqlashda xato yuz berdi.")
 			return
 		}
 
+		log.Printf("✅ [wait_vip_price] VIP tarif muvaffaqiyatli qo'shildi. name=%q, price=%q, BotID=%d", name, price, b.Id)
 		sendUserBot(bot, msg.Chat.ID, fmt.Sprintf("✅ Qo'shildi:\n%s", newLine))
 		return
+
 	default:
+		log.Printf("🟡 [HandleAdminCommands] default blokka tushdi. state=%q", state)
+
 		if strings.HasPrefix(state, "wait_vip_edit_name:") {
 			idxStr := strings.TrimPrefix(state, "wait_vip_edit_name:")
 			idx, _ := strconv.Atoi(idxStr)
+			log.Printf("🟣 [wait_vip_edit_name] idx=%d", idx)
 
 			name := strings.TrimSpace(msg.Text)
 			if name == "" {
+				log.Printf("🔴 [wait_vip_edit_name] nom bo'sh")
 				sendUserBot(bot, msg.Chat.ID, "❌ Nom bo'sh bo'lishi mumkin emas.")
 				return
 			}
@@ -204,6 +247,7 @@ func HandleAdminCommands(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgbota
 			adminState[userID] = fmt.Sprintf("wait_vip_edit_price:%d", idx)
 			mu.Unlock()
 
+			log.Printf("🟢 [wait_vip_edit_name] state='wait_vip_edit_price:%d' ga o'tdi. name=%q", idx, name)
 			sendUserBot(bot, msg.Chat.ID, "💰 Endi yangi narxni yuboring:")
 			return
 		}
@@ -211,9 +255,11 @@ func HandleAdminCommands(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgbota
 		if strings.HasPrefix(state, "wait_vip_edit_price:") {
 			idxStr := strings.TrimPrefix(state, "wait_vip_edit_price:")
 			idx, _ := strconv.Atoi(idxStr)
+			log.Printf("🟣 [wait_vip_edit_price] idx=%d", idx)
 
 			price := strings.TrimSpace(msg.Text)
 			if price == "" {
+				log.Printf("🔴 [wait_vip_edit_price] narx bo'sh")
 				sendUserBot(bot, msg.Chat.ID, "❌ Narx bo'sh bo'lishi mumkin emas.")
 				return
 			}
@@ -224,15 +270,21 @@ func HandleAdminCommands(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgbota
 			delete(adminState, userID)
 			mu.Unlock()
 
+			log.Printf("🔵 [wait_vip_edit_price] bazadan bot o'qilmoqda. BotID=%d", b.Id)
+
 			o := orm.NewOrm()
 			createdBot := models.CreatedBot{Id: b.Id}
 			if err := o.Read(&createdBot); err != nil {
+				log.Printf("🔴 [wait_vip_edit_price] bot o'qishda xatolik: %v", err)
 				sendUserBot(bot, msg.Chat.ID, "❌ Ma'lumotni o'qishda xato.")
 				return
 			}
 
 			lines := parseVipLines(createdBot.VipPrices)
+			log.Printf("🔵 [wait_vip_edit_price] jami tariflar soni: %d, tahrirlanayotgan idx=%d", len(lines), idx)
+
 			if idx < 0 || idx >= len(lines) {
+				log.Printf("🔴 [wait_vip_edit_price] idx=%d chegaradan tashqarida (jami=%d)", idx, len(lines))
 				sendUserBot(bot, msg.Chat.ID, "❌ Bu tarif topilmadi (o'chirilgan bo'lishi mumkin).")
 				return
 			}
@@ -241,14 +293,20 @@ func HandleAdminCommands(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgbota
 			createdBot.VipPrices = strings.Join(lines, "\n") + "\n"
 
 			if _, err := o.Update(&createdBot, "VipPrices"); err != nil {
+				log.Printf("🔴 [wait_vip_edit_price] saqlashda xatolik: %v", err)
 				sendUserBot(bot, msg.Chat.ID, "❌ Saqlashda xato yuz berdi.")
 				return
 			}
 
+			log.Printf("✅ [wait_vip_edit_price] tarif yangilandi: idx=%d, name=%q, price=%q", idx, name, price)
 			sendUserBot(bot, msg.Chat.ID, fmt.Sprintf("✅ Yangilandi:\n%s: %s", name, price))
 			return
 		}
+
+		log.Printf("🔴 [HandleAdminCommands] noma'lum state, hech qanday amal bajarilmadi: %q", state)
 	}
+
+	log.Printf("🏁 [HandleAdminCommands] tugadi. UserID=%d", userID)
 }
 
 func ShowMembership(bot *tgbotapi.BotAPI, b *models.CreatedBot, chatID int64, userID int64) {

@@ -187,7 +187,7 @@ func HandleAnimeBotMessagePro(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *t
 			adminState[userID] = "waiting_edit_code"
 			mu.Unlock()
 
-			sendUserBot(bot, chatID, "🔍 *Tahrirlash qismi*\n\nO'zgartirmoqchi bo'lgan anime **kodini** yozib yuboring:")
+			sendUserBot(bot, chatID, "✏️Tahrirlash qismi\n\nO'zgartirmoqchi bo'lgan anime kodini yozib yuboring:")
 			return
 
 		case "📢 Kanal qo‘shish", "Kanal qo‘shish":

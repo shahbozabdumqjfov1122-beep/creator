@@ -37,6 +37,8 @@ type CreatedBot struct {
 	Note               string    `orm:"type(text);null;column(note)"`       // 🎯 yangi: bot darajasidagi umumiy matn
 	VipPrices          string    `orm:"type(text);null;column(vip_prices)"` // 🎯 YANGI: Admin belgilaydigan VIP narxlar
 	UpdatedAt          time.Time `orm:"auto_now;type(datetime);column(updated_at)"`
+	PhotoUrl           string    `orm:"size(255);null"`
+	TgId               int64     `orm:"column(tg_id);null"`
 }
 
 func (c *CreatedBot) TableName() string {
@@ -125,6 +127,7 @@ type BotUser struct {
 	CanBroadcast      bool        `orm:"default(false)"`
 	CanManageUsers    bool        `orm:"default(false)"`
 	CanViewStats      bool        `orm:"default(false)"`
+	PhotoUrl          string      `orm:"size(255);null;column(photo_url)"`
 }
 
 func (b *BotUser) TableName() string {

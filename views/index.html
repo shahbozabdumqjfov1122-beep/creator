@@ -505,17 +505,25 @@
         }
 
         .user-mini-avatar {
-            width: 30px;
-            height: 30px;
-            border-radius: 8px;
-            background: linear-gradient(135deg, #1d4ed8, #7c3aed);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            overflow: hidden;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 12px;
-            font-weight: 700;
-            color: #fff;
-            flex-shrink: 0
+            flex-shrink: 0;
+            background: #1e293b;
+            font-weight: 600;
+            font-size: 14px;
+            color: #94a3b8;
+            text-transform: uppercase;
+        }
+
+        .user-cell {
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
 
         .user-full-name {
@@ -808,6 +816,16 @@
             }
         }
     </style>
+    <style>
+        .truncate-text {
+            max-width: 160px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            display: inline-block;
+            vertical-align: middle;
+        }
+    </style>
 </head>
 <body>
 
@@ -848,63 +866,25 @@
             <span style="color:#94a3b8">{{.Bot.BotName}}</span>
         </div>
 
-        <div class="card">
-            <div class="bot-header">
-                <div class="bot-avatar"><i class="ti ti-robot"></i></div>
-                <div class="bot-name-wrap">
-                    <div class="bot-name">{{.Bot.BotName}}</div>
-                    <div class="bot-username">{{.Bot.BotUsername}}</div>
-                </div>
-                {{if .Bot.IsActive}}
-                    <span class="status-badge badge-active">ACTIVE</span>
+        <div class="bot-header">
+            <div class="bot-avatar">
+                {{if .Bot.PhotoUrl}}
+                    <img src="{{.Bot.PhotoUrl}}" alt="{{.Bot.BotName}}"
+                         style="width:100%;height:100%;border-radius:50%;object-fit:cover;">
                 {{else}}
-                    <span class="status-badge badge-off">OFF</span>
+                    <i class="ti ti-robot"></i>
                 {{end}}
             </div>
-
-            <div class="info-grid">
-                <div class="info-item">
-                    <div class="info-label">Bot ID</div>
-                    <div class="info-value">#{{.Bot.Id}}</div>
-                </div>
-
-                <div class="info-item">
-                    <div class="info-label">Egasi (UserBot)</div>
-                    <div class="info-value">{{.Bot.Owner.Username}}</div>
-                </div>
-
-                <div class="info-item">
-                    <div class="info-label">Owner Telegram ID</div>
-                    <div class="info-value" style="font-family:monospace;color:#3b82f6">{{.Bot.Owner.TgId}}</div>
-                </div>
-
-                <div class="info-item">
-                    <div class="info-label">Bot Turi</div>
-                    <div class="info-value">{{.Bot.BotType.Name}}</div>
-                </div>
-
-                <div class="info-item">
-                    <div class="info-label">Bot Type Kodi</div>
-                    <div class="info-value" style="font-family:monospace;color:#a855f7">{{.Bot.BotType.Code}}</div>
-                </div>
-
-                <div class="info-item">
-                    <div class="info-label">Foydalanuvchilar</div>
-                    <div class="info-value" style="color:#3b82f6">{{.RealUserCount}}</div>
-                </div>
-
-                <div class="info-item">
-                    <div class="info-label">Yaratilgan</div>
-                    <div class="info-value">{{.Bot.CreatedAt.Format "02 Jan 2006"}}</div>
-                </div>
-
-                <div class="info-item">
-                    <div class="info-label">Yangilangan</div>
-                    <div class="info-value">{{.Bot.UpdatedAt.Format "02 Jan 2006 15:04"}}</div>
-                </div>
+            <div class="bot-name-wrap">
+                <div class="bot-name">{{.Bot.BotName}}</div>
+                <div class="bot-username">{{.Bot.BotUsername}}</div>
             </div>
+            {{if .Bot.IsActive}}
+                <span class="status-badge badge-active">ACTIVE</span>
+            {{else}}
+                <span class="status-badge badge-off">OFF</span>
+            {{end}}
         </div>
-
         <div class="stats-row">
             <div class="stat-card">
                 <div class="stat-num" style="color:#3b82f6">{{.RealUserCount}}</div>
@@ -1102,20 +1082,36 @@
 
         <div class="card">
             <div class="bot-header">
-                <div class="bot-avatar">
-                    {{if .BotUser.FirstName}}{{slice .BotUser.FirstName 0 1}}{{else}}<i class="ti ti-user"></i>{{end}}
-                </div>
-                <div class="bot-name-wrap">
-                    <div class="bot-name">
-                        {{if or .BotUser.FirstName .BotUser.LastName}}
-                            {{.BotUser.FirstName}} {{.BotUser.LastName}}
+                <div class="bot-header">
+                    <div class="bot-avatar">
+                        {{if .BotUser.PhotoUrl}}
+                            <img src="{{.BotUser.PhotoUrl}}" alt="{{.BotUser.FirstName}}"
+                                 style="width:100%;height:100%;border-radius:50%;object-fit:cover;">
                         {{else}}
-                            <span style="color:#64748b;font-style:italic">Ismsiz foydalanuvchi</span>
+                            <i class="ti ti-user"></i>
                         {{end}}
                     </div>
-                    <div class="bot-username">
-                        {{if .BotUser.Username}}@{{.BotUser.Username}}{{else}}username yo'q{{end}}
+
+                    <div class="bot-name-wrap">
+                        <div class="bot-name">
+                            {{if or .BotUser.FirstName .BotUser.LastName}}
+                                {{.BotUser.FirstName}} {{.BotUser.LastName}}
+                            {{else}}
+                                <span style="color:#64748b;font-style:italic">Ismsiz foydalanuvchi</span>
+                            {{end}}
+                        </div>
+                        <div class="bot-username">
+                            {{if .BotUser.Username}}@{{.BotUser.Username}}{{else}}username yo'q{{end}}
+                        </div>
                     </div>
+
+                    {{if .BotUser.IsBlocked}}
+                        <span class="status-badge badge-blocked">BLOCKED</span>
+                    {{else if .BotUser.IsVip}}
+                        <span class="status-badge badge-vip">VIP</span>
+                    {{else}}
+                        <span class="status-badge">Oddiy</span>
+                    {{end}}
                 </div>
 
                 {{if .BotUser.IsBlocked}}
@@ -1377,21 +1373,41 @@
                             </td>
 
                             <td>
-                                <div style="font-weight: 500; color: #f8fafc;">
-                                    {{if or .FirstName .LastName}}
-                                        {{.FirstName}} {{.LastName}}
+                                <div style="display:flex; align-items:center; gap:10px;">
+                                    {{if .PhotoUrl}}
+                                        <img src="{{.PhotoUrl}}" alt=""
+                                             style="width:36px; height:36px; border-radius:50%; object-fit:cover; flex-shrink:0; border:1px solid #1e293b;">
                                     {{else}}
-                                        <span style="color:#64748b; font-style:italic;">Ismsiz foydalanuvchi</span>
+                                        <div style="width:36px; height:36px; border-radius:50%; background:#1e293b;
+                        display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                                            <i class="ti ti-user" style="color:#64748b; font-size:16px;"></i>
+                                        </div>
                                     {{end}}
+
+                                    <div style="min-width:0;">
+                                        <div style="font-weight:500; color:#f8fafc; max-width:160px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"
+                                             title="{{.FirstName}} {{.LastName}}">
+                                            {{if or .FirstName .LastName}}
+                                                {{.FirstName}} {{.LastName}}
+                                            {{else}}
+                                                <span style="color:#64748b; font-style:italic;">Ismsiz</span>
+                                            {{end}}
+                                        </div>
+                                        <small style="color:#94a3b8; display:block; max-width:160px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                                            {{if .Username}}@{{.Username}}{{else}}username yo'q{{end}}
+                                        </small>
+                                    </div>
                                 </div>
-                                <small style="color:#94a3b8">
-                                    {{if .Username}}@{{.Username}}{{else}}username yo'q{{end}}
-                                </small>
                             </td>
 
                             <td>
-                                <div style="font-weight: 500; color: #f8fafc;">
-                                    {{if .Bot}}{{.Bot.BotName}} <small style="color: #94a3b8;">({{.Bot.BotUsername}})</small>{{else}}<span style="color: #64748b;">Noma'lum Bot</span>{{end}}
+                                <div style="font-weight: 500; color: #f8fafc; max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"
+                                     title="{{if .Bot}}{{.Bot.BotName}} ({{.Bot.BotUsername}}){{end}}">
+                                    {{if .Bot}}
+                                        {{.Bot.BotName}} <small style="color: #94a3b8;">({{.Bot.BotUsername}})</small>
+                                    {{else}}
+                                        <span style="color: #64748b;">Noma'lum Bot</span>
+                                    {{end}}
                                 </div>
                             </td>
 
@@ -1478,26 +1494,48 @@
                         <th>Amal</th>
                     </tr>
                     </thead>
+
                     <tbody>
                     {{range .LatestBots}}
                         <tr onclick="window.location='/admin/bots/{{.Id}}'" class="clickable-row">
                             <td class="row-id">#{{.Id}}</td>
 
-                            <td><strong>{{.BotName}}</strong></td>
+                            <td>
+                                <div style="display:flex;align-items:center;gap:10px">
+                                    {{if .PhotoUrl}}
+                                        <img src="{{.PhotoUrl}}" alt="{{.BotName}}"
+                                             style="width:36px;height:36px;border-radius:50%;object-fit:cover;flex-shrink:0;border:1px solid #1e293b">
+                                    {{else}}
+                                        <div style="width:36px;height:36px;border-radius:50%;background:#1e293b;
+                        display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                                            <i class="ti ti-robot" style="color:#64748b;font-size:18px"></i>
+                                        </div>
+                                    {{end}}
+                                    <strong class="truncate-text" title="{{.BotName}}">{{.BotName}}</strong>
+                                </div>
+                            </td>
 
                             <td style="color:#3b82f6">
-                                {{if .BotUsername}}@{{.BotUsername}}{{else}}<span style="color:#64748b; font-style:italic;">yo'q</span>{{end}}
+                                {{if .BotUsername}}
+                                    <span class="truncate-text" title="@{{.BotUsername}}">@{{.BotUsername}}</span>
+                                {{else}}
+                                    <span style="color:#64748b; font-style:italic;">yo'q</span>
+                                {{end}}
                             </td>
 
                             <td>
-                                <span class="mono-badge" style="color:#22c55e">
-                                    {{if .BotType}}{{.BotType.Name}}{{else}}Noma'lum{{end}}
-                                </span>
+            <span class="mono-badge" style="color:#22c55e">
+                {{if .BotType}}{{.BotType.Name}}{{else}}Noma'lum{{end}}
+            </span>
                             </td>
 
                             <td>
                                 {{if .Owner}}
-                                    {{if .Owner.Username}}@{{.Owner.Username}}{{else}}ID: {{.Owner.TgId}}{{end}}
+                                    {{if .Owner.Username}}
+                                        <span class="truncate-text" title="@{{.Owner.Username}}">@{{.Owner.Username}}</span>
+                                    {{else}}
+                                        ID: {{.Owner.TgId}}
+                                    {{end}}
                                 {{else}}
                                     <span style="color:#ef4444; font-style:italic;">Egasiz bot</span>
                                 {{end}}
@@ -1528,6 +1566,7 @@
                         </tr>
                     {{end}}
                     </tbody>
+
                 </table>
             </div>
 
@@ -1569,13 +1608,18 @@
                     </thead>
                     <tbody>
                     {{range .Users}}
-                        <tr class="{{if .IsBlocked}}row-blocked{{end}}" onclick="window.location='/admin/bot-users/{{.Id}}'" style="cursor:pointer">
+                        <tr class="{{if .IsBlocked}}row-blocked{{end}}"
+                            onclick="window.location='/admin/bot-users/{{.Id}}'"
+                            style="cursor:pointer">
+
                             <td class="row-id">#{{.Id}}</td>
 
                             <td>
                                 {{if .Bot}}
                                     <strong>{{.Bot.BotName}}</strong><br>
-                                    <small style="color:#64748b">{{if .Bot.BotUsername}}@{{.Bot.BotUsername}}{{else}}username yo'q{{end}}</small>
+                                    <small style="color:#64748b">
+                                        {{if .Bot.BotUsername}}@{{.Bot.BotUsername}}{{else}}username yo'q{{end}}
+                                    </small>
                                 {{else}}
                                     <span style="color:#ef4444; font-style:italic;">O'chirilgan bot</span>
                                 {{end}}
@@ -1584,30 +1628,42 @@
                             <td>
                                 <div class="user-cell">
                                     <div class="user-mini-avatar">
-                                        {{if and .FirstName (gt (len .FirstName) 0)}}
+                                        {{if .PhotoUrl}}
+                                            <img src="{{.PhotoUrl}}" alt=""
+                                                 style="width:100%;height:100%;border-radius:50%;object-fit:cover;">
+                                        {{else if and .FirstName (gt (len .FirstName) 0)}}
                                             {{slice .FirstName 0 1}}
                                         {{else if and .Username (gt (len .Username) 0)}}
                                             {{slice .Username 0 1}}
                                         {{else}}
-                                            👤
+                                            <i class="ti ti-user" style="font-size:14px;color:#64748b;"></i>
                                         {{end}}
                                     </div>
-                                    <div>
-                                        <div class="user-full-name">
+                                    <div style="min-width:0;">
+                                        <div class="user-full-name"
+                                             style="max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"
+                                             title="{{.FirstName}} {{.LastName}}">
                                             {{if or .FirstName .LastName}}
                                                 {{.FirstName}} {{.LastName}}
                                             {{else}}
                                                 <span style="color:#64748b; font-style:italic;">Ismsiz foydalanuvchi</span>
                                             {{end}}
                                         </div>
-                                        <div class="user-username-small">
-                                            {{if .Username}}@{{.Username}}{{else}}<span style="color:#64748b; font-style:italic;">username yo'q</span>{{end}}
+                                        <div class="user-username-small"
+                                             style="max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                                            {{if .Username}}
+                                                @{{.Username}}
+                                            {{else}}
+                                                <span style="color:#64748b; font-style:italic;">username yo'q</span>
+                                            {{end}}
                                         </div>
                                     </div>
                                 </div>
                             </td>
 
-                            <td><span class="mono-badge">{{.TgId}}</span></td>
+                            <td>
+                                <span class="mono-badge">{{.TgId}}</span>
+                            </td>
 
                             <td>
                                 {{if .IsBlocked}}
@@ -1625,16 +1681,15 @@
                         </tr>
                     {{else}}
                         <tr>
-                            <td colspan="6" class="empty-state" style="padding: 40px; text-align: center;">
-                                <i class="ti ti-users-off" style="font-size:36px;display:block;margin-bottom:12px;opacity:0.6;color:#64748b"></i>
-                                <p style="color:#94a3b8">Hali hech qanday obunachi yo'q</p>
+                            <td colspan="6" class="empty-state" style="padding:40px;text-align:center;">
+                                <i class="ti ti-users-off" style="font-size:36px;display:block;margin-bottom:12px;opacity:0.6;color:#64748b;"></i>
+                                <p style="color:#94a3b8;">Hali hech qanday obunachi yo'q</p>
                             </td>
                         </tr>
                     {{end}}
                     </tbody>
                 </table>
             </div>
-
             <!-- Foydalanuvchilar uchun pagination -->
             {{if gt .TotalUserPages 1}}
                 <div class="pagination">

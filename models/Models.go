@@ -128,6 +128,7 @@ type BotUser struct {
 	CanManageUsers    bool        `orm:"default(false)"`
 	CanViewStats      bool        `orm:"default(false)"`
 	PhotoUrl          string      `orm:"size(255);null;column(photo_url)"`
+	VipUntil          time.Time   `orm:"type(datetime);null;column(vip_until)"`
 }
 
 func (b *BotUser) TableName() string {

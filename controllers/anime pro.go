@@ -79,6 +79,7 @@ func HandleAnimeBotMessagePro(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *t
 			msg.Text == "📋 Blok ro'yxati" ||
 			msg.Text == "📋 VIP ro'yxati" ||
 			msg.Text == "⬅️ Orqaga" ||
+			msg.Text == "Orqaga" ||
 			msg.Text == "/delanime" ||
 			msg.Text == "🎬 qismli anime joylash" ||
 			msg.Text == "/editanime" ||
@@ -138,6 +139,14 @@ func HandleAnimeBotMessagePro(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *t
 			}
 			if state == "wait_promo_channel" {
 				HandlePromoChannelAdd(bot, b, msg)
+				return
+			}
+			if msg.Text == "Orqaga" || msg.Text == "/cancel" {
+				mu.Lock()
+				delete(adminState, userID) // Admin holatini tozalaymiz
+				mu.Unlock()
+
+				sendUserBot(bot, chatID, "Amaliyot bekor qilindi va bosh menyuga qaytdingiz.")
 				return
 			}
 		}
@@ -1586,7 +1595,9 @@ func RouteAnimeEditStatePro(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgb
 			fileID = msg.Photo[len(msg.Photo)-1].FileID
 			kind = "photo"
 		} else {
-			sendUserBot(bot, chatID, "❌ Iltimos, faqat video, rasm yoki hujjat yuboring:")
+			sendUserBot(bot, chatID, "❌ Iltimos, faqat video, rasm yoki hujjat yuboring:"+
+				"yoki  /admin")
+
 			return true
 		}
 
@@ -1718,14 +1729,16 @@ func showUserListPro(bot *tgbotapi.BotAPI, chatID int64, botID int64, vipOnly bo
 		return
 	}
 
-	title := "📋 *Foydalanuvchilar ro'yxati:*"
+	title := "📋 Foydalanuvchilar ro'yxati:"
 	if vipOnly {
-		title = "⭐ *VIP foydalanuvchilar ro'yxati:*"
+		title = "VIP foydalanuvchilar ro'yxati:"
 	} else if blockedOnly {
-		title = "🚫 *Bloklanganlar ro'yxati:*"
+		title = "🚫 Bloklanganlar ro'yxati:"
 	}
 
 	text := title + "\n\n"
+	now := time.Now()
+
 	for i, u := range users {
 		uname := u.Username
 		if uname == "" {
@@ -1734,7 +1747,33 @@ func showUserListPro(bot *tgbotapi.BotAPI, chatID int64, botID int64, vipOnly bo
 			uname = strings.ReplaceAll(uname, "_", "\\_")
 		}
 
-		text += fmt.Sprintf("%d. ID: `%d` — @%s\n", i+1, u.TgId, uname)
+		// Oddiy qator formati
+		userLine := fmt.Sprintf("%d. ID: `%d` — @%s\n", i+1, u.TgId, uname)
+
+		// Agar foydalanuvchi VIP bo'lsa va vaqti ko'rsatilgan bo'lsa
+		if u.IsVip {
+			if u.VipUntil.IsZero() {
+				userLine += " (VIP: Cheksiz)\n"
+			} else if u.VipUntil.Before(now) {
+				userLine += " (VIP: Tugagan)\n"
+			} else {
+				// Qolgan vaqtni hisoblaymiz
+				diff := u.VipUntil.Sub(now)
+				days := int(diff.Hours() / 24)
+				hours := int(diff.Hours()) % 24
+
+				if days > 365 { // 1 yildan ko'p bo'lsa cheksiz deb ko'rsatiladi
+					userLine += " (VIP: Cheksiz)"
+				} else if days > 0 {
+					userLine += fmt.Sprintf(" (VIP: %d kun %d soat qoldi)\n", days, hours)
+				} else {
+					minutes := int(diff.Minutes()) % 60
+					userLine += fmt.Sprintf(" (VIP: %d soat %d daqiqa qoldi)\n", hours, minutes)
+				}
+			}
+		}
+
+		text += userLine + "\n"
 	}
 
 	msg := tgbotapi.NewMessage(chatID, text)
@@ -1747,12 +1786,11 @@ func showUserListPro(bot *tgbotapi.BotAPI, chatID int64, botID int64, vipOnly bo
 		bot.Send(msg)
 	}
 }
-
 func startVipAddPro(bot *tgbotapi.BotAPI, chatID int64, userID int64) {
 	mu.Lock()
 	adminState[userID] = "waiting_vip_add"
 	mu.Unlock()
-	sendUserBot(bot, chatID, "⭐ VIP qilmoqchi bo'lgan foydalanuvchining Telegram ID raqamini yuboring:")
+	sendUserBot(bot, chatID, "VIP qilmoqchi bo'lgan foydalanuvchining Telegram ID raqamini yuboring:")
 }
 
 func startVipRemovePro(bot *tgbotapi.BotAPI, chatID int64, userID int64) {
@@ -1850,7 +1888,7 @@ func RouteUserManagementStatePro(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg
 	if state == "waiting_vip_add" {
 		tgID, err := strconv.ParseInt(strings.TrimSpace(msg.Text), 10, 64)
 		if err != nil {
-			sendUserBot(bot, chatID, "❌ Noto'g'ri ID. Faqat raqam kiriting:\n\n /admin")
+			sendUserBot(bot, chatID, "❌ Noto'g'ri ID. Faqat raqam kiriting yoki orqaga qayting.")
 			return true
 		}
 
@@ -1862,17 +1900,89 @@ func RouteUserManagementStatePro(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg
 
 		if err != nil {
 			sendUserBot(bot, chatID, "❌ Bu foydalanuvchi botda topilmadi.")
-		} else {
+			return true
+		}
+
+		// 🎯 ID ni state ichida saqlab, muddat tanlash bosqichiga o'tkazamiz
+		mu.Lock()
+		adminState[userID] = fmt.Sprintf("waiting_vip_duration:%d", tgID)
+		mu.Unlock()
+
+		// 🎛 Tugmalarni yaratamiz
+		keyboard := tgbotapi.NewReplyKeyboard(
+			tgbotapi.NewKeyboardButtonRow(
+				tgbotapi.NewKeyboardButton("7 kun"),
+				tgbotapi.NewKeyboardButton("10 kun"),
+				tgbotapi.NewKeyboardButton("15 kun"),
+			),
+			tgbotapi.NewKeyboardButtonRow(
+				tgbotapi.NewKeyboardButton("1 oy"),
+				tgbotapi.NewKeyboardButton("3 oy"),
+				tgbotapi.NewKeyboardButton("Cheksiz"),
+			),
+			tgbotapi.NewKeyboardButtonRow(
+				tgbotapi.NewKeyboardButton("Orqaga"),
+			),
+		)
+		keyboard.ResizeKeyboard = true
+
+		msgResponse := tgbotapi.NewMessage(chatID, fmt.Sprintf("👤 ID: %d botdan topildi!\n\n⏳ Iltimos, VIP muddatini tanlang:", tgID))
+		msgResponse.ReplyMarkup = keyboard
+		bot.Send(msgResponse)
+
+		return true
+	}
+
+	if strings.HasPrefix(state, "waiting_vip_duration:") {
+		tgIDStr := strings.TrimPrefix(state, "waiting_vip_duration:")
+		tgID, _ := strconv.ParseInt(tgIDStr, 10, 64)
+
+		durationText := strings.TrimSpace(msg.Text)
+
+		var vipUntil time.Time
+		now := time.Now()
+
+		switch durationText {
+		case "7 kun":
+			vipUntil = now.AddDate(0, 0, 7)
+		case "10 kun":
+			vipUntil = now.AddDate(0, 0, 10)
+		case "15 kun":
+			vipUntil = now.AddDate(0, 0, 15)
+		case "1 oy":
+			vipUntil = now.AddDate(0, 1, 0)
+		case "3 oy":
+			vipUntil = now.AddDate(0, 3, 0)
+		case "Cheksiz":
+			vipUntil = now.AddDate(100, 0, 0) // 100 yil
+		default:
+			sendUserBot(bot, chatID, "❌ Iltimos, pastdagi tugmalardan birini tanlang:")
+			return true
+		}
+
+		var bu models.BotUser
+		err := o.QueryTable(new(models.BotUser)).
+			Filter("Bot__Id", b.Id).
+			Filter("TgId", tgID).
+			One(&bu)
+
+		if err == nil {
 			bu.IsVip = true
-			o.Update(&bu, "IsVip")
-			sendUserBot(bot, chatID, fmt.Sprintf("✅ ID %d VIP qilindi!", tgID))
+			bu.VipUntil = vipUntil // 👈 Vaqtni saqlaymiz
+
+			// Orm orqali har ikkala ustunni update qilamiz
+			o.Update(&bu, "IsVip", "VipUntil")
+
+			successMsg := tgbotapi.NewMessage(chatID, fmt.Sprintf("✅ ID %d uchun VIP (%s) berildi!\n\nTugash vaqti: %s", tgID, durationText, vipUntil.Format("02.01.2006 15:04")))
+			successMsg.ReplyMarkup = tgbotapi.NewRemoveKeyboard(true)
+			bot.Send(successMsg)
 		}
 
 		mu.Lock()
 		delete(adminState, userID)
 		mu.Unlock()
-		showUsersPanelPro(bot, chatID)
 		return true
+
 	}
 
 	if state == "waiting_vip_remove" {
@@ -1899,8 +2009,8 @@ func RouteUserManagementStatePro(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg
 		mu.Lock()
 		delete(adminState, userID)
 		mu.Unlock()
-		showUsersPanelPro(bot, chatID)
 		return true
+
 	}
 
 	if state == "waiting_block_add" {
@@ -1927,7 +2037,6 @@ func RouteUserManagementStatePro(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg
 		mu.Lock()
 		delete(adminState, userID)
 		mu.Unlock()
-		showUsersPanelPro(bot, chatID)
 		return true
 	}
 
@@ -1955,11 +2064,60 @@ func RouteUserManagementStatePro(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg
 		mu.Lock()
 		delete(adminState, userID)
 		mu.Unlock()
-		showUsersPanelPro(bot, chatID)
-		return true
+
 	}
 
 	return false
+}
+
+func StartVipCleanerTask() {
+	go func() {
+		ticker := time.NewTicker(10 * time.Minute)
+		defer ticker.Stop()
+
+		for range ticker.C {
+			cleanExpiredVips()
+		}
+	}()
+}
+
+func cleanExpiredVips() {
+	o := orm.NewOrm()
+	now := time.Now()
+
+	var expiredUsers []models.BotUser
+	_, err := o.QueryTable(new(models.BotUser)).
+		Filter("IsVip", true).
+		Filter("VipUntil__lt", now).
+		All(&expiredUsers)
+
+	if err != nil || len(expiredUsers) == 0 {
+		return
+	}
+
+	for _, u := range expiredUsers {
+		u.IsVip = false
+		if _, err := o.Update(&u, "IsVip"); err != nil {
+			log.Printf("VIP tozalashda xatolik (TgID: %d): %v", u.TgId, err)
+			continue
+		}
+		log.Printf("VIP muddati tugadi va o'chirildi: TgID %d", u.TgId)
+	}
+}
+
+func IsUserVip(user *models.BotUser) bool {
+	if !user.IsVip {
+		return false
+	}
+
+	// Agar IsVip true bo'lsa-yu, lekin vaqti o'tib ketgan bo'lsa
+	if !user.VipUntil.IsZero() && user.VipUntil.Before(time.Now()) {
+		user.IsVip = false
+		orm.NewOrm().Update(user, "IsVip")
+		return false
+	}
+
+	return true
 }
 
 func showStatisticsPro(bot *tgbotapi.BotAPI, b *models.CreatedBot, chatID int64) {
@@ -3091,9 +3249,7 @@ func HandleAdCreationSteps(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgbo
 		sendUserBot(
 			bot,
 			chatID,
-			"✅ Media qabul qilindi!\n\n"+
-				"✍️ Endi reklama ostiga yoziladigan **Matn (Caption)** yuboring:\n"+
-				"*(Agar matn bo'lmasa `-` belgisini yuboring)*",
+			"✍️ Endi reklama ostiga yoziladigan { Matn } (Caption) yuboring:",
 		)
 		return true
 
@@ -3111,15 +3267,27 @@ func HandleAdCreationSteps(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgbo
 		setPendingAd(userID, ad)
 		setAdminState(userID, StateWaitingForAdButtonText)
 
-		sendUserBot(
-			bot,
-			chatID,
-			"✅ Matn saqlandi!\n\n"+
-				"Endi reklama ostidagi tugma matnini yuboring:\n"+
-				"Masalan: `Tomosha qilish`",
+		// 1. Pastda chiqadigan tayyor tugmalarni yaratamiz
+		keyboard := tgbotapi.NewReplyKeyboard(
+			tgbotapi.NewKeyboardButtonRow(
+				tgbotapi.NewKeyboardButton("Tomosha qilish"),
+				tgbotapi.NewKeyboardButton("Yuklab olish"),
+			),
+			tgbotapi.NewKeyboardButtonRow(
+				tgbotapi.NewKeyboardButton("Orqaga"),
+			),
 		)
-		return true
+		keyboard.ResizeKeyboard = true
 
+		// 2. Xabar obyektini tuzamiz
+		responseMsg := tgbotapi.NewMessage(chatID,
+			"Endi reklama ostidagi tugma matnini yuboring yoki pastdagilardan birini tanlang:",
+		)
+		responseMsg.ParseMode = "Markdown"
+		responseMsg.ReplyMarkup = keyboard
+
+		bot.Send(responseMsg)
+		return true
 	// --------------------------------------------------
 	// C) TUGMA MATNI (Button Text) QABUL QILISH
 	// --------------------------------------------------
@@ -3137,7 +3305,7 @@ func HandleAdCreationSteps(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgbo
 		sendUserBot(
 			bot,
 			chatID,
-			"✅ Tugma matni saqlandi!\n\n endi anime kodni yuboring",
+			"anime kodni yuboring",
 		)
 		return true
 

@@ -40,7 +40,6 @@ func main() {
 	services.StartDailyBillingScheduler()
 	go services.SyncAllMissingUserPhotos()
 	go services.SyncAllMissingPhotos()
-
 	controllers.StartExpiredInvoiceCleaner()
 
 	CreateDefaultAdmin()

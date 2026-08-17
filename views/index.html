@@ -867,14 +867,6 @@
         </div>
 
         <div class="bot-header">
-            <div class="bot-avatar">
-                {{if .Bot.PhotoUrl}}
-                    <img src="{{.Bot.PhotoUrl}}" alt="{{.Bot.BotName}}"
-                         style="width:100%;height:100%;border-radius:50%;object-fit:cover;">
-                {{else}}
-                    <i class="ti ti-robot"></i>
-                {{end}}
-            </div>
             <div class="bot-name-wrap">
                 <div class="bot-name">{{.Bot.BotName}}</div>
                 <div class="bot-username">{{.Bot.BotUsername}}</div>
@@ -1083,14 +1075,6 @@
         <div class="card">
             <div class="bot-header">
                 <div class="bot-header">
-                    <div class="bot-avatar">
-                        {{if .BotUser.PhotoUrl}}
-                            <img src="{{.BotUser.PhotoUrl}}" alt="{{.BotUser.FirstName}}"
-                                 style="width:100%;height:100%;border-radius:50%;object-fit:cover;">
-                        {{else}}
-                            <i class="ti ti-user"></i>
-                        {{end}}
-                    </div>
 
                     <div class="bot-name-wrap">
                         <div class="bot-name">
@@ -1475,6 +1459,7 @@
             </div>
         </div>
 
+        ```
         <div class="card">
             <div class="card-title">
                 <i class="ti ti-robot"></i> Oxirgi Yaratilgan Botlar (CreatedBot)
@@ -1494,48 +1479,26 @@
                         <th>Amal</th>
                     </tr>
                     </thead>
-
                     <tbody>
                     {{range .LatestBots}}
                         <tr onclick="window.location='/admin/bots/{{.Id}}'" class="clickable-row">
                             <td class="row-id">#{{.Id}}</td>
 
-                            <td>
-                                <div style="display:flex;align-items:center;gap:10px">
-                                    {{if .PhotoUrl}}
-                                        <img src="{{.PhotoUrl}}" alt="{{.BotName}}"
-                                             style="width:36px;height:36px;border-radius:50%;object-fit:cover;flex-shrink:0;border:1px solid #1e293b">
-                                    {{else}}
-                                        <div style="width:36px;height:36px;border-radius:50%;background:#1e293b;
-                        display:flex;align-items:center;justify-content:center;flex-shrink:0">
-                                            <i class="ti ti-robot" style="color:#64748b;font-size:18px"></i>
-                                        </div>
-                                    {{end}}
-                                    <strong class="truncate-text" title="{{.BotName}}">{{.BotName}}</strong>
-                                </div>
-                            </td>
+                            <td><strong>{{.BotName}}</strong></td>
 
                             <td style="color:#3b82f6">
-                                {{if .BotUsername}}
-                                    <span class="truncate-text" title="@{{.BotUsername}}">@{{.BotUsername}}</span>
-                                {{else}}
-                                    <span style="color:#64748b; font-style:italic;">yo'q</span>
-                                {{end}}
+                                {{if .BotUsername}}@{{.BotUsername}}{{else}}<span style="color:#64748b; font-style:italic;">yo'q</span>{{end}}
                             </td>
 
                             <td>
-            <span class="mono-badge" style="color:#22c55e">
-                {{if .BotType}}{{.BotType.Name}}{{else}}Noma'lum{{end}}
-            </span>
+                        <span class="mono-badge" style="color:#22c55e">
+                            {{if .BotType}}{{.BotType.Name}}{{else}}Noma'lum{{end}}
+                        </span>
                             </td>
 
                             <td>
                                 {{if .Owner}}
-                                    {{if .Owner.Username}}
-                                        <span class="truncate-text" title="@{{.Owner.Username}}">@{{.Owner.Username}}</span>
-                                    {{else}}
-                                        ID: {{.Owner.TgId}}
-                                    {{end}}
+                                    {{if .Owner.Username}}@{{.Owner.Username}}{{else}}ID: {{.Owner.TgId}}{{end}}
                                 {{else}}
                                     <span style="color:#ef4444; font-style:italic;">Egasiz bot</span>
                                 {{end}}
@@ -1566,7 +1529,6 @@
                         </tr>
                     {{end}}
                     </tbody>
-
                 </table>
             </div>
 
@@ -1627,18 +1589,6 @@
 
                             <td>
                                 <div class="user-cell">
-                                    <div class="user-mini-avatar">
-                                        {{if .PhotoUrl}}
-                                            <img src="{{.PhotoUrl}}" alt=""
-                                                 style="width:100%;height:100%;border-radius:50%;object-fit:cover;">
-                                        {{else if and .FirstName (gt (len .FirstName) 0)}}
-                                            {{slice .FirstName 0 1}}
-                                        {{else if and .Username (gt (len .Username) 0)}}
-                                            {{slice .Username 0 1}}
-                                        {{else}}
-                                            <i class="ti ti-user" style="font-size:14px;color:#64748b;"></i>
-                                        {{end}}
-                                    </div>
                                     <div style="min-width:0;">
                                         <div class="user-full-name"
                                              style="max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"

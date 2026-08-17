@@ -557,19 +557,6 @@ func handleTokenInput(chatID int64, userTgID int64, token string) {
 		return
 	}
 
-	// 🎯 Bot profil rasmini olib, DB'ga saqlaymiz (xatolik bo'lsa ham davom etadi)
-	go func(b *models.CreatedBot, tgId int64) {
-		photoUrl, err := services.FetchAndSaveBotPhoto(b.Token, tgId, b.Id)
-		if err != nil {
-			log.Printf("Bot rasmi olinmadi (bot %d): %v", b.Id, err)
-			return
-		}
-		b.PhotoUrl = photoUrl
-		if _, err := o.Update(b, "PhotoUrl"); err != nil {
-			log.Printf("PhotoUrl saqlashda xatolik (bot %d): %v", b.Id, err)
-		}
-	}(newBot, int64(testBot.Self.ID))
-
 	go services.StartNewBot(newBot)
 
 	go services.StartNewBot(newBot) // 🎯 TUZATILDI: 1-kun bepul, pul yechilmaydi
@@ -908,20 +895,6 @@ func handleTokenChangeInput(chatID int64, userTgID int64, newToken string) {
 		send(chatID, "❌ Tokenni bazada yangilashda xatolik yuz berdi.", nil)
 		return
 	}
-
-	// 🎯 Rasmni ham yangilaymiz
-	go func(b models.CreatedBot, tgId int64) {
-		photoUrl, err := services.FetchAndSaveBotPhoto(b.Token, tgId, b.Id)
-		if err != nil {
-			log.Printf("Bot rasmi yangilanmadi (bot %d): %v", b.Id, err)
-			return
-		}
-		localOrm := orm.NewOrm()
-		b.PhotoUrl = photoUrl
-		if _, err := localOrm.Update(&b, "PhotoUrl"); err != nil {
-			log.Printf("PhotoUrl yangilashda xatolik (bot %d): %v", b.Id, err)
-		}
-	}(bot, int64(testBot.Self.ID))
 
 	// 4. Eski va yangi bot bir vaqtda tekshiriladi — muvaffaqiyatli bo'lgani uchun
 	//    endi eski runtime'ni to'xtatib, yangi token bilan qayta ishga tushiramiz

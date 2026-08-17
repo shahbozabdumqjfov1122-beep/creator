@@ -38,8 +38,6 @@ func main() {
 	services.RestoreActiveBots()
 	services.StartFastBillingChecker()
 	services.StartDailyBillingScheduler()
-	go services.SyncAllMissingUserPhotos()
-	go services.SyncAllMissingPhotos()
 	controllers.StartExpiredInvoiceCleaner()
 
 	CreateDefaultAdmin()

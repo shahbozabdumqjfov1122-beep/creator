@@ -1616,8 +1616,6 @@ func RunBroadcast(bot *tgbotapi.BotAPI, b *models.CreatedBot, srcMsg *tgbotapi.M
 	resultMsg := tgbotapi.NewMessage(chatID, report)
 	resultMsg.ParseMode = "Markdown"
 	bot.Send(resultMsg)
-
-	showAdminPanel(bot, chatID)
 }
 
 func startAdminAdd(bot *tgbotapi.BotAPI, chatID int64, userID int64) {

@@ -1187,8 +1187,12 @@ func handleAnimeSearchPro(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgbot
 	}
 
 	// Natijalar topildi — inline tugmalar bilan ro‘yxat chiqaramiz
+	// Kodi faqat harflardan iborat bo'lgan animelar qidiruvda ko'rsatilmaydi
 	var rows [][]tgbotapi.InlineKeyboardButton
 	for _, a := range animes {
+		if isCodeOnlyLetters(a.Code) {
+			continue
+		}
 		btnText := a.Name
 		if a.Code != "" {
 			btnText = fmt.Sprintf("%s  [%s]", a.Name, a.Code)
@@ -1198,9 +1202,16 @@ func handleAnimeSearchPro(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgbot
 		rows = append(rows, tgbotapi.NewInlineKeyboardRow(btn))
 	}
 
+	if len(rows) == 0 {
+		text := fmt.Sprintf("🔍 «%s» bo‘yicha hech qanday anime topilmadi.\n\nBoshqa so‘z yoki kod bilan qidirib ko‘ring.", query)
+		reply := tgbotapi.NewMessage(msg.Chat.ID, text)
+		bot.Send(reply)
+		return
+	}
+
 	keyboard := tgbotapi.NewInlineKeyboardMarkup(rows...)
 
-	text := fmt.Sprintf("«%s» bo‘yicha topilgan animelar (%d ta):\n\n", query, len(animes))
+	text := fmt.Sprintf("«%s» bo‘yicha topilgan animelar (%d ta):\n\n", query, len(rows))
 	reply := tgbotapi.NewMessage(msg.Chat.ID, text)
 	reply.ReplyMarkup = keyboard
 

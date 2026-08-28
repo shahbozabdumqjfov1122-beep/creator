@@ -43,6 +43,7 @@ var HardcodedBotTypes = []struct {
 	{Name: "Kino Bot", Code: "kino"},
 	{Name: "Anime Bot", Code: "anime"},
 	{Name: "Anime Pro Bot", Code: "animepro"},
+	{Name: "Kino Pro Bot", Code: "kinopro"},
 }
 
 func InitCreatorBot(token string) error {

@@ -156,7 +156,7 @@ func HandleKinoPhotoStep(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgbota
 	adminState[userID] = "kino_videos"
 
 	text := fmt.Sprintf(
-		"🎬 **Nom:** %s\n🆔 **Kod:** `%s`\n\n🌌 **Muqova saqlandi!**\n\nEndi videolar, fayllar yoki rasmlarni yuboring.\n\nTugatganingizda **/ok** deb yozing.",
+		"🎬 Nom: %s\n🆔 Kod: `%s`\n\n🌌 Muqova saqlandi!\n\nEndi videolar, fayllar yoki rasmlarni yuboring.\n\nTugatganingizda /ok deb yozing.",
 		draft.Name, draft.Code,
 	)
 
@@ -235,7 +235,7 @@ func HandleKinoVideosStep(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgbot
 		"photo":    "🖼 Rasm",
 	}[kind]
 
-	text := fmt.Sprintf("✅ **%d-qism** qabul qilindi!\nTur: %s\n\nDavom ettiring yoki **/ok** deb yozing.", draft.NextOrder-1, kindLabel)
+	text := fmt.Sprintf("✅ %d-qism qabul qilindi!\nTur: %s\n\nDavom ettiring yoki /ok deb yozing.", draft.NextOrder-1, kindLabel)
 
 	bot.Send(tgbotapi.NewMessage(chatID, text))
 }

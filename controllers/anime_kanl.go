@@ -15,6 +15,7 @@ import (
 
 var (
 	adminState       = make(map[int64]string)
+	adminKinoID      = make(map[int64]int64) // ← yangi
 	adminTempChannel = make(map[int64]int64)
 	quickAnimeTemp   = make(map[int64]string) // 🎯 shu qatorni qo'shing
 	quickKinoTemp    = make(map[int64]string)

@@ -21,6 +21,8 @@ func HandleUserBotMessage(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgbot
 		HandleAnimeBotMessagePro(bot, b, msg)
 	case "kino":
 		HandleKinoBotMessage(bot, b, msg)
+	case "kinopro":
+		HandleKinoBotMessagePro(bot, b, msg)
 	default:
 		sendUserBot(bot, msg.Chat.ID, "⚠️ Bu bot turi qo'llab-quvvatlanmaydi.")
 	}
@@ -196,7 +198,23 @@ func HandleUserBotCallbackQuery(bot *tgbotapi.BotAPI, b *models.CreatedBot, cb *
 
 		HandleKinoCallback(bot, cb) // Kino uchun alohida handler
 		return
-
+	case strings.HasPrefix(data, "kino_page:") ||
+		strings.HasPrefix(data, "kino_part:") ||
+		strings.HasPrefix(data, "kino_select_") ||
+		strings.HasPrefix(data, "kino_edit_code:") ||
+		strings.HasPrefix(data, "kino_edit_name:") ||
+		strings.HasPrefix(data, "kino_edit_addpart:") ||
+		strings.HasPrefix(data, "kino_edit_delpart:") ||
+		strings.HasPrefix(data, "kino_edit_photo:") ||
+		strings.HasPrefix(data, "delete_kino:") ||
+		strings.HasPrefix(data, "top_kino:"):
+		switch b.BotType.Code {
+		case "kinopro":
+			HandleKinoCallbackPro(bot, cb)
+		default:
+			HandleKinoCallback(bot, cb)
+		}
+		return
 	// -------------------------------------------------------------
 	// 3. EDIT VA ADMIN SOZLAMALARI
 	// -------------------------------------------------------------

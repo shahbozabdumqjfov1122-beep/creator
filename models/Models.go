@@ -159,11 +159,13 @@ func (b *BotJoinRequest) TableName() string {
 type Kino struct {
 	Id         int64       `orm:"auto;pk"`
 	Bot        *CreatedBot `orm:"rel(fk);column(bot_id)"`
-	Name       string      `orm:"size(300)"`                      // Kino nomi
-	Code       string      `orm:"size(100)"`                      // Kino kodi (qidiruv uchun)
-	PhotoID    string      `orm:"size(500);column(photo_id)"`     // Kino afishasi/rasmi IDsi
-	Year       int         `orm:"default(0);column(year)"`        // Kinosining chiqarilgan yili
-	PartsCount int         `orm:"default(0);column(parts_count)"` // Qismlar soni
+	Name       string      `orm:"size(300)"`
+	Code       string      `orm:"size(100)"`
+	Note       string      `orm:"null;type(text);column(note)"`
+	PhotoID    string      `orm:"size(500);column(photo_id)"`
+	Year       int         `orm:"default(0);column(year)"`
+	PartsCount int         `orm:"default(0);column(parts_count)"`
+	ViewsCount int64       `orm:"default(0);column(views_count)"`
 	IsActive   bool        `orm:"default(true);column(is_active)"`
 	CreatedAt  time.Time   `orm:"auto_now_add;type(datetime);column(created_at)"`
 	UpdatedAt  time.Time   `orm:"auto_now;type(datetime);column(updated_at)"`

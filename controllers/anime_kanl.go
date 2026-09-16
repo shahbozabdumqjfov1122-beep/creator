@@ -72,7 +72,7 @@ func HandleAdminCommands(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgbota
 		return
 	}
 
-	if msg.Text == "/vipnarx" || msg.Text == "💎 vip narx qo'shish" {
+	if msg.Text == "/vipnarx" || msg.Text == "💎 vip narx qo'shish" || msg.Text == "vip narx qo'shish" {
 		mu.Lock()
 		adminState[userID] = "wait_vip_name"
 		mu.Unlock()

@@ -7,6 +7,7 @@ import (
 	"creator/services"
 	"fmt"
 	"log"
+	"net/http"
 
 	_ "creator/routers"
 
@@ -18,6 +19,7 @@ import (
 func main() {
 	database.InitDB()
 	database.SeedBotTypes()
+	beego.Handler("/payment/sms", http.HandlerFunc(controllers.SMSWebhookHandler))
 
 	creatorToken, err := beego.AppConfig.String("creator_bot_token")
 	if err != nil || creatorToken == "" {
@@ -31,6 +33,8 @@ func main() {
 
 	services.OnMessage = controllers.HandleUserBotMessage
 	services.OnCallback = controllers.HandleUserBotCallbackQuery
+	controllers.StartHumoUserbot()
+
 	services.OnJoinRequest = controllers.SaveJoinRequest
 
 	services.SetSharedCreatorBot(controllers.CreatorBot)

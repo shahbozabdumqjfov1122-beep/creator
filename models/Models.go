@@ -226,10 +226,20 @@ type PromoChannel struct {
 	CreatedAt time.Time   `orm:"auto_now_add;type(datetime);column(created_at)"`
 	UpdatedAt time.Time   `orm:"auto_now;type(datetime);column(updated_at)"`
 }
+type UserbotSession struct {
+	Id        int64     `orm:"auto;pk"`
+	Name      string    `orm:"size(100);unique"`
+	Data      string    `orm:"type(text)"`
+	UpdatedAt time.Time `orm:"auto_now;type(datetime);column(updated_at)"`
+}
 
+func (u *UserbotSession) TableName() string {
+	return "userbot_session"
+}
 func init() {
 	orm.RegisterModel(
 		new(UserBot),
+		new(UserbotSession),
 		new(BotStat),
 		new(BotType),
 		new(CreatedBot),

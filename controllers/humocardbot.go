@@ -9,6 +9,9 @@ import (
 	"strings"
 	"time"
 
+	"creator/models"
+
+	"github.com/beego/beego/v2/client/orm"
 	beego "github.com/beego/beego/v2/server/web"
 	"github.com/gotd/td/session"
 	"github.com/gotd/td/telegram"
@@ -17,8 +20,11 @@ import (
 	"github.com/gotd/td/tg"
 )
 
-// Xabarlari kuzatiladigan botlar (kichik harflarda).
-var paymentBotUsernames = []string{"@HUMOcardbot"}
+// Xabarlari kuzatiladigan botlar.
+var paymentBotUsernames = []string{"humocardbot"}
+
+// Sessiya bazada shu nom bilan saqlanadi
+const userbotSessionName = "humo_userbot"
 
 func isPaymentBot(username string) bool {
 	u := strings.ToLower(strings.TrimPrefix(strings.TrimSpace(username), "@"))
@@ -30,6 +36,52 @@ func isPaymentBot(username string) bool {
 	}
 	return false
 }
+
+// ============================================================
+// SESSIYANI BAZADA SAQLASH
+// ============================================================
+
+// dbSessionStorage - gotd session.Storage interfeysini PostgreSQL orqali amalga oshiradi
+type dbSessionStorage struct {
+	name string
+}
+
+func (s *dbSessionStorage) LoadSession(ctx context.Context) ([]byte, error) {
+	o := orm.NewOrm()
+
+	var rec models.UserbotSession
+	err := o.QueryTable(new(models.UserbotSession)).Filter("Name", s.name).One(&rec)
+	if err == orm.ErrNoRows {
+		return nil, session.ErrNotFound // sessiya hali yo'q, yangi kirish kerak
+	}
+	if err != nil {
+		return nil, err
+	}
+	return []byte(rec.Data), nil
+}
+
+func (s *dbSessionStorage) StoreSession(ctx context.Context, data []byte) error {
+	o := orm.NewOrm()
+
+	var rec models.UserbotSession
+	err := o.QueryTable(new(models.UserbotSession)).Filter("Name", s.name).One(&rec)
+	if err == orm.ErrNoRows {
+		rec = models.UserbotSession{Name: s.name, Data: string(data)}
+		_, insErr := o.Insert(&rec)
+		return insErr
+	}
+	if err != nil {
+		return err
+	}
+
+	rec.Data = string(data)
+	_, updErr := o.Update(&rec, "Data", "UpdatedAt")
+	return updErr
+}
+
+// ============================================================
+// USERBOT
+// ============================================================
 
 // StartHumoUserbot - Telegram akkauntingizga ulanib xabarlarni kuzatadi.
 func StartHumoUserbot() {
@@ -56,14 +108,14 @@ func StartHumoUserbot() {
 func runHumoUserbot(apiID int, apiHash, phone, password string) error {
 	dispatcher := tg.NewUpdateDispatcher()
 
-	// Update'larni to'g'ri qabul qilish uchun manager yaratiladi
+	// Update'larni to'g'ri qabul qilish uchun manager
 	gaps := updates.New(updates.Config{
 		Handler: dispatcher,
 	})
 
 	client := telegram.NewClient(apiID, apiHash, telegram.Options{
 		UpdateHandler:  gaps,
-		SessionStorage: &session.FileStorage{Path: "userbot.session.json"},
+		SessionStorage: &dbSessionStorage{name: userbotSessionName},
 	})
 
 	dispatcher.OnNewMessage(func(ctx context.Context, e tg.Entities, u *tg.UpdateNewMessage) error {
@@ -82,8 +134,6 @@ func runHumoUserbot(apiID int, apiHash, phone, password string) error {
 		}
 
 		log.Printf("📩 %s dan xabar keldi, tekshirilmoqda...", sender.Username)
-
-		// Xabar matnini qayta ishlash funksiyasi
 		processIncomingSMS(msg.Message)
 		return nil
 	})
@@ -104,7 +154,6 @@ func runHumoUserbot(apiID int, apiHash, phone, password string) error {
 
 		log.Println("🤖 Userbot ulandi, HUMOcard xabarlari kuzatilmoqda")
 
-		// Update siklini ushlab turish uchun gaps.Run ishlatiladi
 		return gaps.Run(ctx, client.API(), user.ID, updates.AuthOptions{
 			IsBot: false,
 		})

@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"creator/models"
@@ -25,6 +26,9 @@ var paymentBotUsernames = []string{"humocardbot"}
 
 // Sessiya bazada shu nom bilan saqlanadi
 const userbotSessionName = "humo_userbot"
+
+// Kod kiritish uchun terminal yo'q bo'lsa true bo'ladi
+var userbotNeedsLogin atomic.Bool
 
 func isPaymentBot(username string) bool {
 	u := strings.ToLower(strings.TrimPrefix(strings.TrimSpace(username), "@"))
@@ -98,8 +102,17 @@ func StartHumoUserbot() {
 	go func() {
 		for {
 			if err := runHumoUserbot(apiID, apiHash, phone, password); err != nil {
-				log.Printf("⚠️ Userbot to'xtadi: %v — 10 soniyadan keyin qayta ulanadi", err)
+				log.Printf("⚠️ Userbot to'xtadi: %v", err)
 			}
+
+			// Terminal yo'q va sessiya yo'q bo'lsa, qayta-qayta kod so'ramaymiz
+			if userbotNeedsLogin.Load() {
+				log.Println("❌ Userbot sessiyasi yo'q yoki eskirgan. Serverda qo'lda kirish kerak: `systemctl stop creator`, keyin `./creator` ni ishga tushirib, Telegram kodini kiriting.")
+				send(AdminChatID, "⚠️ Userbot Telegram'ga kira olmadi. Sessiya yo'q yoki tugatilgan. Serverda qo'lda kirish kerak, avto-qabul hozir ishlamaydi.", nil)
+				return
+			}
+
+			log.Println("🔄 Userbot 10 soniyadan keyin qayta ulanadi")
 			time.Sleep(10 * time.Second)
 		}
 	}()
@@ -165,6 +178,7 @@ func askLoginCode(ctx context.Context, _ *tg.AuthSentCode) (string, error) {
 	fmt.Print("📲 Telegram'ga kelgan kodni kiriting: ")
 	code, err := bufio.NewReader(os.Stdin).ReadString('\n')
 	if err != nil {
+		userbotNeedsLogin.Store(true) // terminal yo'q (masalan, systemd): qayta urinmaymiz
 		return "", err
 	}
 	return strings.TrimSpace(code), nil

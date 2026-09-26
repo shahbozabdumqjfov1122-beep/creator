@@ -25,6 +25,7 @@ func HandleKinoBotMessagePro(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tg
 			msg.Text == "/addchannel" ||
 			msg.Text == "/delchannel" ||
 			msg.Text == "/ok" ||
+			msg.Text == "Kanallar ro'yxati" ||
 			msg.Text == "/vipnarx" ||
 			msg.Text == "➕ Kino joylash" ||
 			msg.Text == "➕ Kanal qo‘shish" ||
@@ -142,7 +143,9 @@ func HandleKinoBotMessagePro(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tg
 		case "➕ Kino joylash", "Kino joylash", "/addkino":
 			StartKinoUpload(bot, b, msg)
 			return
-
+		case "Kanallar ro'yxati":
+			showChannelsListPro(bot, b, chatID)
+			return
 		case "🎬 qismli kino joylash", "qismli kino joylash":
 			StartQuickKinoUploadPro(bot, b, msg)
 			return
@@ -379,6 +382,7 @@ func HandleKinoBotMessagePro(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tg
 		return
 	}
 }
+
 func showAsosiyPanelProprKino(bot *tgbotapi.BotAPI, chatID int64) {
 	keyboardJSON := `{
 		"keyboard": [
@@ -413,6 +417,9 @@ func showAdminsPanelProprKino(bot *tgbotapi.BotAPI, chatID int64) {
 			[
 				{"text": "Kanall qo‘shish", "icon_custom_emoji_id": "5771868281212245617"},
 				{"text": "Kanall o'chirish", "icon_custom_emoji_id": "5771511103141975115"}
+			],
+			[
+				{"text": "Kanallar ro'yxati", "icon_custom_emoji_id": "5771868281212245617"}
 			],
 			[
 				{"text": "Orqaga", "icon_custom_emoji_id": "5877629862306385808"}
@@ -1369,6 +1376,9 @@ func HandleKinoCallbackPro(bot *tgbotapi.BotAPI, cb *tgbotapi.CallbackQuery) {
 	log.Printf("Kino callback keldi: %s (Chat ID: %d)", data, chatID)
 
 	switch {
+	case strings.HasPrefix(data, "check_sub_"):
+		HandleCheckSubscriptionCallbackKino(bot, cb)
+		return
 	case strings.HasPrefix(data, "vip_prices_"):
 		botID, err := strconv.ParseInt(strings.TrimPrefix(data, "vip_prices_"), 10, 64)
 		if err != nil {
@@ -1434,26 +1444,13 @@ func HandleKinoCallbackPro(bot *tgbotapi.BotAPI, cb *tgbotapi.CallbackQuery) {
 			return
 		}
 
-		botUser := GetOrCreateBotUser(kino.Bot, userID, cb.From)
-		protectContent := !(botUser.IsVip || isAdmin(kino.Bot, userID))
-
-		if kino.PartsCount == 1 {
-			sendSingleKinoPartPro(bot, o, chatID, &kino, kino.Bot.Note, protectContent)
-		} else {
-			caption := fmt.Sprintf("%s\n\nJami qismlar - %d", kino.Name, kino.PartsCount)
-			if kino.Bot.Note != "" {
-				caption += fmt.Sprintf("\n\n%s", kino.Bot.Note)
-			}
-			keyboard := buildKinoPartsKeyboardPro(kino.Id, kino.PartsCount, 1)
-
-			if kino.PhotoID != "" {
-				_ = sendProtectedPhotoPro(bot, chatID, kino.PhotoID, caption, &keyboard, protectContent)
-			} else {
-				_ = sendProtectedTextPro(bot, chatID, caption, &keyboard, protectContent)
-			}
+		fakeMsg := &tgbotapi.Message{
+			Chat: cb.Message.Chat,
+			From: cb.From,
+			Text: kino.Code,
 		}
+		handleKinoByCodePro(bot, kino.Bot, fakeMsg, kino.Code)
 		return
-
 	case strings.HasPrefix(data, "admin_info:"):
 		parts := strings.Split(strings.TrimPrefix(data, "admin_info:"), ":")
 		if len(parts) != 2 {
@@ -1811,4 +1808,60 @@ func showTopKinoPro(bot *tgbotapi.BotAPI, b *models.CreatedBot, chatID int64) {
 	msg.ParseMode = "HTML"
 	msg.ReplyMarkup = keyboard
 	bot.Send(msg)
+}
+
+func HandleCheckSubscriptionCallbackKino(bot *tgbotapi.BotAPI, cb *tgbotapi.CallbackQuery) {
+	if cb.Message == nil {
+		return
+	}
+
+	chatID := cb.Message.Chat.ID
+	userID := cb.From.ID
+	data := cb.Data
+
+	botIDStr := strings.TrimPrefix(data, "check_sub_")
+	botID, err := strconv.ParseInt(botIDStr, 10, 64)
+	if err != nil {
+		bot.Request(tgbotapi.NewCallback(cb.ID, "❌ Xatolik yuz berdi"))
+		return
+	}
+
+	o := orm.NewOrm()
+	var b models.CreatedBot
+	if err := o.QueryTable(new(models.CreatedBot)).
+		Filter("Id", botID).
+		One(&b); err != nil {
+		bot.Request(tgbotapi.NewCallback(cb.ID, "❌ Bot topilmadi"))
+		return
+	}
+
+	// Obunani qayta tekshiramiz (join request'lar ham hisobga olinadi)
+	if !CheckSubscription(bot, &b, userID) {
+		bot.Request(tgbotapi.NewCallback(cb.ID, "❌ Siz hali barcha kanallarga obuna bo'lmagansiz!"))
+		return
+	}
+
+	bot.Request(tgbotapi.NewCallback(cb.ID, "✅ Obuna tasdiqlandi!"))
+
+	// Oldingi "obuna bo'ling" xabarini o'chiramiz
+	bot.Request(tgbotapi.NewDeleteMessage(chatID, cb.Message.MessageID))
+
+	// Foydalanuvchi qidirgan matnni olib kelamiz
+	mu.Lock()
+	query, hasQuery := pendingSearch[userID]
+	delete(pendingSearch, userID)
+	mu.Unlock()
+
+	if !hasQuery || strings.TrimSpace(query) == "" {
+		sendUserBot(bot, chatID, "✅ Obuna tasdiqlandi! Endi kino kodini yuborishingiz mumkin.")
+		return
+	}
+
+	fakeMsg := &tgbotapi.Message{
+		Chat: cb.Message.Chat,
+		From: cb.From,
+		Text: query,
+	}
+
+	handleKinoByCodePro(bot, &b, fakeMsg, query)
 }

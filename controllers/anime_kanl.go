@@ -586,3 +586,36 @@ func showVipListForAction(bot *tgbotapi.BotAPI, b *models.CreatedBot, chatID int
 	msg.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(rows...)
 	bot.Send(msg)
 }
+
+func showChannelsListPro(bot *tgbotapi.BotAPI, b *models.CreatedBot, chatID int64) {
+	o := orm.NewOrm()
+	var channels []models.BotChannel
+
+	_, err := o.QueryTable(new(models.BotChannel)).
+		Filter("Bot__Id", b.Id).
+		Filter("IsActive", true).
+		OrderBy("Id").
+		All(&channels)
+
+	if err != nil || len(channels) == 0 {
+		sendUserBot(bot, chatID, "📭 Hozircha hech qanday majburiy obuna kanali qo'shilmagan.")
+		return
+	}
+
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprintf("📋 <b>Majburiy obuna kanallari</b> (%d ta):\n\n", len(channels)))
+
+	for i, ch := range channels {
+		sb.WriteString(fmt.Sprintf(
+			"<b>%d.</b> 🆔 ID: <code>%d</code>\n🔗 Link: %s\n\n",
+			i+1, ch.ChannelID, ch.InviteLink,
+		))
+	}
+
+	msg := tgbotapi.NewMessage(chatID, sb.String())
+	msg.ParseMode = "HTML"
+
+	if _, sendErr := bot.Send(msg); sendErr != nil {
+		log.Printf("🔴 showChannelsListPro: xabar yuborishda xatolik: %v", sendErr)
+	}
+}

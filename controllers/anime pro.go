@@ -54,6 +54,7 @@ func HandleAnimeBotMessagePro(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *t
 			msg.Text == "/addchannel" ||
 			msg.Text == "/delchannel" ||
 			msg.Text == "/ok" ||
+			msg.Text == "Kanallar ro'yxati" ||
 			msg.Text == "/vipnarx" ||
 			msg.Text == "➕ Anime joylash" ||
 			msg.Text == "➕ Kanal qo‘shish" ||
@@ -216,7 +217,9 @@ func HandleAnimeBotMessagePro(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *t
 		case "🗑 Kanal o'chirish", "Kanal o'chirish":
 			showPromoChannelsForDelete(bot, b, chatID)
 			return
-
+		case "📋 Kanallar ro'yxati", "Kanallar ro'yxati", "Kanallar royhati":
+			showChannelsListPro(bot, b, chatID)
+			return
 		case "🗑 Animeni o‘chirish", "Animeni o'chirish", "/delanime":
 			mu.Lock()
 			adminState[userID] = "waiting_delete_code"
@@ -892,6 +895,9 @@ func showAdminsPanelPropr(bot *tgbotapi.BotAPI, chatID int64) {
 			[
 				{"text": "Kanall qo‘shish", "icon_custom_emoji_id": "5771868281212245617"},
 				{"text": "Kanall o'chirish", "icon_custom_emoji_id": "5771511103141975115"}
+			],
+			[
+				{"text": "Kanallar ro'yxati", "icon_custom_emoji_id": "5771868281212245617"}
 			],
 			[
 				{"text": "Orqaga", "icon_custom_emoji_id": "5877629862306385808"}

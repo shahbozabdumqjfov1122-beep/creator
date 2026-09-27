@@ -473,19 +473,15 @@ func ShowChannelsToDelete(bot *tgbotapi.BotAPI, b *models.CreatedBot, chatID int
 	bot.Send(msg)
 }
 
-func HandleVipPricesCallback(bot *tgbotapi.BotAPI, callback *tgbotapi.CallbackQuery, botID int64) {
-	if callback.Message == nil {
-		bot.Request(tgbotapi.NewCallback(callback.ID, "❌ Xabar topilmadi."))
-		return
-	}
-
+// Umumiy mantiq: buni ham callback, ham /vip matn buyrug'i ishlatadi.
+func sendVipPricesInfoPro(bot *tgbotapi.BotAPI, chatID int64, botID int64) error {
 	o := orm.NewOrm()
 	createdBot := models.CreatedBot{Id: botID}
 
 	err := o.Read(&createdBot)
 	if err != nil {
-		bot.Request(tgbotapi.NewCallback(callback.ID, "❌ Ma'lumot topilmadi!"))
-		return
+		sendUserBot(bot, chatID, "❌ Ma'lumot topilmadi!")
+		return err
 	}
 
 	o.LoadRelated(&createdBot, "Owner")
@@ -503,7 +499,7 @@ func HandleVipPricesCallback(bot *tgbotapi.BotAPI, callback *tgbotapi.CallbackQu
 		pricesText += fmt.Sprintf("\n\n📌 Eslatma: %s", createdBot.Note)
 	}
 
-	msg := tgbotapi.NewMessage(callback.Message.Chat.ID, pricesText)
+	msg := tgbotapi.NewMessage(chatID, pricesText)
 	msg.ParseMode = "Markdown"
 
 	if createdBot.Owner != nil {
@@ -520,16 +516,33 @@ func HandleVipPricesCallback(bot *tgbotapi.BotAPI, callback *tgbotapi.CallbackQu
 		)
 	}
 
-	// 🎯 FIX: Markdown xato bersa, formatlashsiz qayta yuboramiz
 	if _, sendErr := bot.Send(msg); sendErr != nil {
 		log.Printf("🟡 Markdown xatosi, formatlashsiz qayta yuborilmoqda: %v", sendErr)
-		msg.ParseMode = "" // Markdown o'chiriladi
+		msg.ParseMode = ""
 		if _, sendErr2 := bot.Send(msg); sendErr2 != nil {
 			log.Printf("🔴 Ikkinchi urinishda ham xato: %v", sendErr2)
+			return sendErr2
 		}
 	}
 
+	return nil
+}
+
+// HandleVipPricesCallback — "vip_prices_" tugmasi bosilganda ishga tushadi.
+func HandleVipPricesCallback(bot *tgbotapi.BotAPI, callback *tgbotapi.CallbackQuery, botID int64) {
+	if callback.Message == nil {
+		bot.Request(tgbotapi.NewCallback(callback.ID, "❌ Xabar topilmadi."))
+		return
+	}
+
+	_ = sendVipPricesInfoPro(bot, callback.Message.Chat.ID, botID)
+
 	bot.Request(tgbotapi.NewCallback(callback.ID, ""))
+}
+
+// HandleVipCommand — foydalanuvchi "/vip" matn buyrug'ini yozganda ishga tushadi.
+func HandleVipCommand(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgbotapi.Message) {
+	_ = sendVipPricesInfoPro(bot, msg.Chat.ID, b.Id)
 }
 
 func parseVipLines(vipPrices string) []string {

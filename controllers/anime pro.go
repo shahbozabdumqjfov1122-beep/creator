@@ -386,9 +386,11 @@ func HandleAnimeBotMessagePro(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *t
 	case "/start":
 		handleAnimeStartPro(bot, b, msg)
 		return
-
+	case "/vip":
+		HandleVipCommand(bot, b, msg)
+		return
 	case "/help":
-		sendUserBot(bot, chatID, "🎌 Anime kodini yozing...")
+		HandleHelpCommand(bot, b, msg)
 		return
 	case "reyting", "/reyting", "Reyting", "REYTING", "рейтинг", "Рейтинг":
 		showTopAnimePro(bot, b, chatID)
@@ -401,6 +403,56 @@ func HandleAnimeBotMessagePro(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *t
 		handleAnimeByCodePro(bot, b, msg, msg.Text)
 		return
 	}
+}
+
+func HandleHelpCommand(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgbotapi.Message) {
+	log.Printf("🟢 HandleHelpCommand BOSHLANDI. UserID=%d", msg.From.ID)
+
+	o := orm.NewOrm()
+	createdBot := models.CreatedBot{Id: b.Id}
+
+	if err := o.Read(&createdBot); err != nil {
+		log.Printf("🔴 HandleHelpCommand: bot o'qishda xato: %v", err)
+		sendUserBot(bot, msg.Chat.ID, "❌ Ma'lumot topilmadi!")
+		return
+	}
+
+	o.LoadRelated(&createdBot, "Owner")
+	log.Printf("🟢 HandleHelpCommand: Owner yuklandi. Owner=%+v", createdBot.Owner)
+
+	text := `<tg-emoji emoji-id="5323404142809467476">📢</tg-emoji> Reklama joylashtirmoqchimisiz?
+
+<tg-emoji emoji-id="5323404142809467476">💎</tg-emoji> Yoki jonli obuna (VIP) sotib olmoqchimisiz?
+
+<tg-emoji emoji-id="5323404142809467476">👇</tg-emoji> Quyidagi tugma orqali admin bilan bog'laning:`
+
+	reply := tgbotapi.NewMessage(msg.Chat.ID, text)
+	reply.ParseMode = "HTML"
+
+	if createdBot.Owner != nil {
+		username := strings.TrimPrefix(createdBot.Owner.Username, "@")
+		var contactURL string
+		if username != "" {
+			contactURL = "https://t.me/" + username
+		} else {
+			contactURL = fmt.Sprintf("tg://user?id=%d", createdBot.Owner.TgId)
+		}
+		log.Printf("🟢 HandleHelpCommand: contactURL=%q", contactURL)
+
+		contactBtn := tgbotapi.NewInlineKeyboardButtonURL("Bog'lanish", contactURL)
+		reply.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(
+			tgbotapi.NewInlineKeyboardRow(contactBtn),
+		)
+	} else {
+		log.Printf("🟡 HandleHelpCommand: Owner nil")
+	}
+
+	log.Printf("🟢 HandleHelpCommand: bot.Send chaqirilmoqda...")
+	if _, sendErr := bot.Send(reply); sendErr != nil {
+		log.Printf("🔴 HandleHelpCommand: xabar yuborishda xatolik: %v", sendErr)
+		return
+	}
+	log.Printf("🟢 HandleHelpCommand: MUVAFFAQIYATLI yuborildi")
 }
 
 func StartQuickAnimeUploadPro(bot *tgbotapi.BotAPI, _ *models.CreatedBot, msg *tgbotapi.Message) {
@@ -1039,9 +1091,11 @@ func handleAnimeStartPro(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgbota
 		return
 	}
 
-	text := `<tg-emoji emoji-id="5960714428394507968">🏷</tg-emoji> /reyting - Top Anime
-<tg-emoji emoji-id="5899757765743615694">📥</tg-emoji> /admin - Admin uchun 
-<tg-emoji emoji-id="5899757765743615694"></tg-emoji>
+	text := `<tg-emoji emoji-id="5960714428394507968">📥</tg-emoji> /reyting - Top Anime
+<tg-emoji emoji-id="5807465992363710697">💎</tg-emoji> /vip - vip olish uchun
+<tg-emoji emoji-id="5323404142809467476">⚡️</tg-emoji> /help - homi bo'lish uchun
+<tg-emoji emoji-id="6028226658543082010">🏷</tg-emoji> /admin - Admin uchun 
+
 <tg-emoji emoji-id="5987802868734760945">🆔</tg-emoji> Anime nomi yoki kodini kiriting:`
 
 	sendUserBot(bot, msg.Chat.ID, text)

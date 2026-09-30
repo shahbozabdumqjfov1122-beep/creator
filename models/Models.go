@@ -169,6 +169,7 @@ type Kino struct {
 	IsActive   bool        `orm:"default(true);column(is_active)"`
 	CreatedAt  time.Time   `orm:"auto_now_add;type(datetime);column(created_at)"`
 	UpdatedAt  time.Time   `orm:"auto_now;type(datetime);column(updated_at)"`
+	IsVipOnly  bool        `orm:"default(false)"`
 }
 
 type KinoPart struct {

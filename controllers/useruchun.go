@@ -187,17 +187,39 @@ func HandleUserBotCallbackQuery(bot *tgbotapi.BotAPI, b *models.CreatedBot, cb *
 		}
 		return
 
-	case strings.HasPrefix(data, "kino_page:") ||
-		strings.HasPrefix(data, "kino_part:") ||
-		strings.HasPrefix(data, "kino_edit_code:") ||
-		strings.HasPrefix(data, "kino_edit_name:") ||
-		strings.HasPrefix(data, "kino_edit_addpart:") ||
-		strings.HasPrefix(data, "kino_edit_delpart:") ||
-		strings.HasPrefix(data, "kino_edit_photo:") ||
-		strings.HasPrefix(data, "delete_kino:"):
+	case strings.HasPrefix(data, "toggle_vip_kino:"):
+		kinoID, err := strconv.ParseInt(strings.TrimPrefix(data, "toggle_vip_kino:"), 10, 64)
+		if err != nil {
+			bot.Send(tgbotapi.NewMessage(chatID, "❌ ID aniqlanmadi"))
+			return
+		}
 
-		HandleKinoCallback(bot, cb) // Kino uchun alohida handler
+		o := orm.NewOrm()
+		var kino models.Kino
+		err = o.QueryTable(new(models.Kino)).
+			Filter("Id", kinoID).
+			Filter("Bot__Id", b.Id).
+			One(&kino)
+		if err != nil {
+			bot.Send(tgbotapi.NewMessage(chatID, "❌ Kino topilmadi"))
+			return
+		}
+
+		kino.IsVipOnly = !kino.IsVipOnly
+		if _, err := o.Update(&kino, "IsVipOnly"); err != nil {
+			bot.Send(tgbotapi.NewMessage(chatID, "❌ Saqlashda xatolik"))
+			return
+		}
+
+		status := "🔓 Endi hamma ko'ra oladi"
+		if kino.IsVipOnly {
+			status = "🔒 Endi faqat VIP lar ko'ra oladi"
+		}
+		m := tgbotapi.NewMessage(chatID, status)
+		m.ParseMode = "Markdown"
+		bot.Send(m)
 		return
+
 	case strings.HasPrefix(data, "kino_page:") ||
 		strings.HasPrefix(data, "kino_part:") ||
 		strings.HasPrefix(data, "kino_select_") ||
@@ -206,6 +228,7 @@ func HandleUserBotCallbackQuery(bot *tgbotapi.BotAPI, b *models.CreatedBot, cb *
 		strings.HasPrefix(data, "kino_edit_addpart:") ||
 		strings.HasPrefix(data, "kino_edit_delpart:") ||
 		strings.HasPrefix(data, "kino_edit_photo:") ||
+		strings.HasPrefix(data, "kino_edit_year:") ||
 		strings.HasPrefix(data, "delete_kino:") ||
 		strings.HasPrefix(data, "top_kino:"):
 		switch b.BotType.Code {
@@ -215,6 +238,7 @@ func HandleUserBotCallbackQuery(bot *tgbotapi.BotAPI, b *models.CreatedBot, cb *
 			HandleKinoCallback(bot, cb)
 		}
 		return
+
 	// -------------------------------------------------------------
 	// 3. EDIT VA ADMIN SOZLAMALARI
 	// -------------------------------------------------------------

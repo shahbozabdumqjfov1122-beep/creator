@@ -366,9 +366,12 @@ func HandleKinoBotMessagePro(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tg
 	case "/start":
 		handleKinoStartPro(bot, b, msg)
 		return
+	case "/vip":
+		HandleVipCommand(bot, b, msg)
+		return
 
 	case "/help":
-		sendUserBot(bot, chatID, "🎬 Kino kodini yozing...")
+		HandleHelpCommand(bot, b, msg)
 		return
 	case "reyting", "/reyting", "Reyting", "REYTING", "рейтинг", "Рейтинг":
 		showTopKinoPro(bot, b, chatID)
@@ -609,8 +612,9 @@ func handleKinoStartPro(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgbotap
 	}
 
 	text := `<tg-emoji emoji-id="5960714428394507968">🏷</tg-emoji> /reyting - Top Kino
-<tg-emoji emoji-id="5899757765743615694">📥</tg-emoji> /admin - Admin uchun 
-<tg-emoji emoji-id="5899757765743615694"></tg-emoji>
+<tg-emoji emoji-id="5807465992363710697">💎</tg-emoji> /vip - vip olish uchun
+<tg-emoji emoji-id="5323404142809467476">⚡️</tg-emoji> /help - homi bo'lish uchun
+<tg-emoji emoji-id="6028226658543082010">🏷</tg-emoji> /admin - Admin uchun 
 <tg-emoji emoji-id="5987802868734760945">🆔</tg-emoji> Kino nomi yoki kodini kiriting:`
 
 	sendUserBot(bot, msg.Chat.ID, text)
@@ -622,7 +626,7 @@ func handleKinoByCodePro(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgbota
 	fmt.Println("Code:", code)
 
 	userID := msg.From.ID
-	_ = GetOrCreateBotUser(b, userID, msg.From)
+	botUser := GetOrCreateBotUser(b, userID, msg.From)
 
 	// Protect qoida:
 	//    - Admin → protect = false (uzata oladi)
@@ -652,6 +656,31 @@ func handleKinoByCodePro(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgbota
 	fmt.Println("PhotoID:", kino.PhotoID)
 
 	// ========== VIEWS COUNT OSHIRISH ==========
+	if kino.IsVipOnly && !isAdmin(b, userID) && !botUser.IsVip {
+		// Owner munosabat (relation) bo'lgani uchun, ehtimol yuklanmagan bo'ladi
+		if b.Owner != nil && b.Owner.TgId == 0 {
+			o.LoadRelated(b, "Owner")
+		}
+
+		contactURL := ""
+		if b.Owner != nil && b.Owner.TgId != 0 {
+			contactURL = fmt.Sprintf("tg://user?id=%d", b.Owner.TgId)
+		}
+
+		m := tgbotapi.NewMessage(msg.Chat.ID,
+			"🔒 Bu kino faqat VIP foydalanuvchilar uchun.\n\nVIP olish uchun admin bilan bog'laning.")
+
+		if contactURL != "" {
+			m.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(
+				tgbotapi.NewInlineKeyboardRow(
+					tgbotapi.NewInlineKeyboardButtonURL("Bog'lanish", contactURL),
+				),
+			)
+		}
+
+		bot.Send(m)
+		return
+	}
 	kino.ViewsCount++
 	if _, err := o.Update(&kino, "ViewsCount"); err != nil {
 		log.Printf("ViewsCount yangilashda xatolik: %v", err)
@@ -949,7 +978,10 @@ func RouteKinoEditStatePro(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgbo
 			sendUserBot(bot, chatID, "❌ Ushbu botga tegishli bunday kodli kino topilmadi.\n\nQaytadan to'g'ri kod kiriting:")
 			return true
 		}
-
+		vipBtnText := "🔓 VIP-only: O'chiq"
+		if kino.IsVipOnly {
+			vipBtnText = "🔒 VIP-only: Yoqiq"
+		}
 		keyboard := tgbotapi.NewInlineKeyboardMarkup(
 			tgbotapi.NewInlineKeyboardRow(
 				tgbotapi.NewInlineKeyboardButtonData("🔑 Kodni o'zgartirish", fmt.Sprintf("kino_edit_code:%d", kino.Id)),
@@ -964,6 +996,7 @@ func RouteKinoEditStatePro(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgbo
 				tgbotapi.NewInlineKeyboardButtonData("📅 Yilini o'zgartirish", fmt.Sprintf("kino_edit_year:%d", kino.Id)),
 			),
 			tgbotapi.NewInlineKeyboardRow(
+				tgbotapi.NewInlineKeyboardButtonData(vipBtnText, fmt.Sprintf("toggle_vip_kino:%d", kino.Id)),
 				tgbotapi.NewInlineKeyboardButtonData("🗑 Butunlay o'chirish", fmt.Sprintf("delete_kino:%d", kino.Id)),
 			),
 		)
@@ -1376,6 +1409,38 @@ func HandleKinoCallbackPro(bot *tgbotapi.BotAPI, cb *tgbotapi.CallbackQuery) {
 	log.Printf("Kino callback keldi: %s (Chat ID: %d)", data, chatID)
 
 	switch {
+	case strings.HasPrefix(data, "toggle_vip_kino:"):
+		kinoID, err := strconv.ParseInt(strings.TrimPrefix(data, "toggle_vip_kino:"), 10, 64)
+		if err != nil {
+			bot.Send(tgbotapi.NewMessage(chatID, "❌ ID aniqlanmadi"))
+			return
+		}
+
+		o := orm.NewOrm()
+		var kino models.Kino
+		err = o.QueryTable(new(models.Kino)).
+			Filter("Id", kinoID).
+			One(&kino)
+		if err != nil {
+			bot.Send(tgbotapi.NewMessage(chatID, "❌ Kino topilmadi"))
+			return
+		}
+
+		kino.IsVipOnly = !kino.IsVipOnly
+		if _, err := o.Update(&kino, "IsVipOnly"); err != nil {
+			bot.Send(tgbotapi.NewMessage(chatID, "❌ Saqlashda xatolik"))
+			return
+		}
+
+		status := "🔓 Endi hamma ko'ra oladi"
+		if kino.IsVipOnly {
+			status = "🔒 Endi faqat VIP lar ko'ra oladi"
+		}
+
+		m := tgbotapi.NewMessage(chatID, status)
+		m.ParseMode = "Markdown"
+		bot.Send(m)
+		return
 	case strings.HasPrefix(data, "check_sub_"):
 		HandleCheckSubscriptionCallbackKino(bot, cb)
 		return

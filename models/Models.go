@@ -37,6 +37,7 @@ type CreatedBot struct {
 	Note               string    `orm:"type(text);null;column(note)"`       // 🎯 yangi: bot darajasidagi umumiy matn
 	VipPrices          string    `orm:"type(text);null;column(vip_prices)"` // 🎯 YANGI: Admin belgilaydigan VIP narxlar
 	UpdatedAt          time.Time `orm:"auto_now;type(datetime);column(updated_at)"`
+	Card               string    `orm:"type(text);null"`
 }
 
 func (c *CreatedBot) TableName() string {

@@ -84,6 +84,9 @@ func HandleAnimeBotMessagePro(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *t
 			msg.Text == "/delanime" ||
 			msg.Text == "🎬 qismli anime joylash" ||
 			msg.Text == "/editanime" ||
+			msg.Text == "💳 Karta sozlash" ||
+			msg.Text == "Karta sozlash" ||
+			msg.Text == "/karta" ||
 			msg.Text == "Kanall qo‘shish"
 
 	if isNewCommand && msg.Text != "/ok" && isAdmin(b, userID) {
@@ -93,12 +96,36 @@ func HandleAnimeBotMessagePro(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *t
 		delete(adminTempChannel, userID)
 		mu.Unlock()
 	}
+	mu.Lock()
+	vipState, vipExists := adminState[userID]
+	mu.Unlock()
+
+	if vipExists && (vipState == "waiting_vip_card" || strings.HasPrefix(vipState, "waiting_vip_check:")) {
+		if msg.Text == "/cancel" || msg.Text == "Orqaga" {
+			mu.Lock()
+			delete(adminState, userID)
+			mu.Unlock()
+			sendUserBot(bot, chatID, "❌ Bekor qilindi")
+			return
+		}
+		if RouteVipPaymentState(bot, b, msg, vipState) {
+			return
+		}
+	}
 	if isAdmin(b, userID) {
 		mu.Lock()
 		state, exists := adminState[userID]
 		mu.Unlock()
 
 		if exists {
+			if msg.Text == "/cancel" || msg.Text == "Bekor qilish" {
+				mu.Lock()
+				delete(adminState, userID)
+				delete(adminTempChannel, userID)
+				mu.Unlock()
+				sendUserBot(bot, chatID, "❌ Amal bekor qilindi.")
+				return
+			}
 			if RouteAnimeUploadState(bot, b, msg, state) {
 				return
 			}
@@ -179,7 +206,9 @@ func HandleAnimeBotMessagePro(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *t
 		case "💎 vip narx qo'shish", "vip narx qo'shish", "/vipnarx":
 			HandleAdminCommands(bot, b, msg)
 			return
-
+		case "💳 Karta sozlash", "Karta sozlash", "/karta":
+			showCardMenuPro2(bot, b, chatID, userID)
+			return
 		case "🗑 VIP narxni o'chirish", "VIP narxni o'chirish":
 			showVipListForAction(bot, b, chatID, userID, "delete")
 			return
@@ -404,6 +433,25 @@ func HandleAnimeBotMessagePro(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *t
 		return
 	}
 }
+func showCardMenuPro2(bot *tgbotapi.BotAPI, b *models.CreatedBot, chatID int64, userID int64) {
+	o := orm.NewOrm()
+	fresh := models.CreatedBot{Id: b.Id}
+	if err := o.Read(&fresh); err != nil {
+		sendUserBot(bot, chatID, "❌ Ma'lumot topilmadi.")
+		return
+	}
+
+	text := "💳 Karta ma'lumotini yuboring.\n\nMasalan:\n8600 1234 .... ....	\nA.A"
+	if strings.TrimSpace(fresh.Card) != "" {
+		text = fmt.Sprintf("💳 Joriy karta:\n\n%s\n\nYangisini almashtirish uchun yangi karta ma'lumotini yuboring:", fresh.Card)
+	}
+
+	mu.Lock()
+	adminState[userID] = "waiting_vip_card"
+	mu.Unlock()
+
+	sendUserBot(bot, chatID, text+"\n\n(Bekor qilish: /cancel)")
+}
 
 func HandleHelpCommand(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgbotapi.Message) {
 	log.Printf("🟢 HandleHelpCommand BOSHLANDI. UserID=%d", msg.From.ID)
@@ -470,6 +518,7 @@ func RouteQuickAnimeStatePro(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tg
 	userID := msg.From.ID
 	chatID := msg.Chat.ID
 
+	// 2. Tezkor anime nomi kutilayotgan holat
 	if state == "waiting_quick_name" {
 		name := strings.TrimSpace(msg.Text)
 		if name == "" {
@@ -486,6 +535,7 @@ func RouteQuickAnimeStatePro(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tg
 		return true
 	}
 
+	// 3. Tezkor anime fayli kutilayotgan holat
 	if state == "waiting_quick_file" {
 		var fileID, kind, photoID, coverKind string
 
@@ -984,6 +1034,8 @@ func showVIPPanelPropr(bot *tgbotapi.BotAPI, chatID int64) {
 			[
 				{"text": "VIP qo'shish", "icon_custom_emoji_id": "5920090136627908485"},
 				{"text": "VIP o'chirish", "icon_custom_emoji_id": "5886496611835581345"}
+			],[
+				{"text": "Karta sozlash", "icon_custom_emoji_id": "5954175920506933873"}
 			],
 			[
 				{"text": "Orqaga", "icon_custom_emoji_id": "5877629862306385808"}
@@ -1130,9 +1182,15 @@ func handleAnimeByCodePro(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgbot
 		return
 	}
 
-	// 2. Anime bazadan topilgandan keyin VIP ekanligini tekshiramiz:
-	if anime.IsVipOnly && !botUser.IsVip && !isAdmin(b, userID) {
-		sendUserBot(bot, msg.Chat.ID, "🔒 Bu anime faqat VIP foydalanuvchilar uchun.\n\nVIP bo‘lish uchun admin bilan bog‘laning.")
+	if anime.IsVipOnly && !isAdmin(b, userID) && !botUser.IsVip {
+		m := tgbotapi.NewMessage(msg.Chat.ID,
+			"🔒 Bu kino faqat VIP foydalanuvchilar uchun.\n\nVIP olish uchun pastdagi tugmani bosing 👇")
+		m.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(
+			tgbotapi.NewInlineKeyboardRow(
+				tgbotapi.NewInlineKeyboardButtonData("💎 VIP olish", fmt.Sprintf("vip_prices_%d", b.Id)),
+			),
+		)
+		bot.Send(m)
 		return
 	}
 
@@ -1834,7 +1892,7 @@ func showUserListPro(bot *tgbotapi.BotAPI, chatID int64, botID int64, vipOnly bo
 				hours := int(diff.Hours()) % 24
 
 				if days > 365 { // 1 yildan ko'p bo'lsa cheksiz deb ko'rsatiladi
-					userLine += " (VIP: Cheksiz)"
+					userLine += " (VIP: Cheksiz)\n"
 				} else if days > 0 {
 					userLine += fmt.Sprintf(" (VIP: %d kun %d soat qoldi)\n", days, hours)
 				} else {
@@ -1857,6 +1915,7 @@ func showUserListPro(bot *tgbotapi.BotAPI, chatID int64, botID int64, vipOnly bo
 		bot.Send(msg)
 	}
 }
+
 func startVipAddPro(bot *tgbotapi.BotAPI, chatID int64, userID int64) {
 	mu.Lock()
 	adminState[userID] = "waiting_vip_add"
@@ -2000,6 +2059,59 @@ func RouteUserManagementStatePro(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg
 		msgResponse := tgbotapi.NewMessage(chatID, fmt.Sprintf("👤 ID: %d botdan topildi!\n\n⏳ Iltimos, VIP muddatini tanlang:", tgID))
 		msgResponse.ReplyMarkup = keyboard
 		bot.Send(msgResponse)
+
+		return true
+	}
+
+	if strings.HasPrefix(state, "waiting_vip_duration:") {
+		tgIDStr := strings.TrimPrefix(state, "waiting_vip_duration:")
+		tgID, _ := strconv.ParseInt(tgIDStr, 10, 64)
+
+		durationText := strings.TrimSpace(msg.Text)
+
+		var vipUntil time.Time
+		now := time.Now()
+
+		switch durationText {
+		case "7 kun":
+			vipUntil = now.AddDate(0, 0, 7)
+		case "10 kun":
+			vipUntil = now.AddDate(0, 0, 10)
+		case "15 kun":
+			vipUntil = now.AddDate(0, 0, 15)
+		case "1 oy":
+			vipUntil = now.AddDate(0, 1, 0)
+		case "3 oy":
+			vipUntil = now.AddDate(0, 3, 0)
+		case "Cheksiz":
+			vipUntil = now.AddDate(100, 0, 0) // 100 yil
+		default:
+			sendUserBot(bot, chatID, "❌ Iltimos, pastdagi tugmalardan birini tanlang:")
+			return true
+		}
+
+		var bu models.BotUser
+		err := o.QueryTable(new(models.BotUser)).
+			Filter("Bot__Id", b.Id).
+			Filter("TgId", tgID).
+			One(&bu)
+
+		if err == nil {
+			bu.IsVip = true
+			bu.VipUntil = vipUntil
+
+			o.Update(&bu, "IsVip", "VipUntil")
+
+			// Inline yoki Reply tugmalarni olib tashlab, faqat tasdiq matnini yuboramiz
+			successMsg := tgbotapi.NewMessage(chatID, fmt.Sprintf("✅ ID %d uchun VIP (%s) berildi!\n\nTugash vaqti: %s", tgID, durationText, vipUntil.Format("02.01.2006 15:04")))
+			successMsg.ReplyMarkup = tgbotapi.NewRemoveKeyboard(true)
+			bot.Send(successMsg)
+		}
+
+		// Statemizni o'chiramiz va shu bilan ishni yakunlaymiz
+		mu.Lock()
+		delete(adminState, userID)
+		mu.Unlock()
 
 		return true
 	}

@@ -55,6 +55,9 @@ func HandleKinoBotMessagePro(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tg
 			msg.Text == "/delkino" ||
 			msg.Text == "🎬 qismli kino joylash" ||
 			msg.Text == "/editkino" ||
+			msg.Text == "💳 Karta sozlash" ||
+			msg.Text == "Karta sozlash" ||
+			msg.Text == "/karta" ||
 			msg.Text == "Kanall qo‘shish"
 
 	if isNewCommand && msg.Text != "/ok" && isAdmin(b, userID) {
@@ -65,6 +68,23 @@ func HandleKinoBotMessagePro(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tg
 		delete(adminKinoID, userID) // ← qo‘shing
 		mu.Unlock()
 	}
+	mu.Lock()
+	vipState, vipExists := adminState[userID]
+	mu.Unlock()
+
+	if vipExists && (vipState == "waiting_vip_card" || strings.HasPrefix(vipState, "waiting_vip_check:")) {
+		if msg.Text == "/cancel" || msg.Text == "Orqaga" {
+			mu.Lock()
+			delete(adminState, userID)
+			mu.Unlock()
+			sendUserBot(bot, chatID, "❌ Bekor qilindi")
+			return
+		}
+		if RouteVipPaymentState(bot, b, msg, vipState) {
+			return
+		}
+	}
+
 	if isAdmin(b, userID) {
 		mu.Lock()
 		state, exists := adminState[userID]
@@ -244,7 +264,9 @@ func HandleKinoBotMessagePro(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tg
 		case "🚫 VIP o'chirish", "VIP o'chirish":
 			startVipRemovePro(bot, chatID, userID)
 			return
-
+		case "💳 Karta sozlash", "Karta sozlash", "/karta":
+			showCardMenuPro(bot, b, chatID, userID)
+			return
 		case "📋 VIP ro'yxati", "VIP ro'yxati":
 			showUserListPro(bot, chatID, b.Id, true, false)
 			return
@@ -384,6 +406,25 @@ func HandleKinoBotMessagePro(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tg
 		handleKinoByCodePro(bot, b, msg, msg.Text)
 		return
 	}
+}
+func showCardMenuPro(bot *tgbotapi.BotAPI, b *models.CreatedBot, chatID int64, userID int64) {
+	o := orm.NewOrm()
+	fresh := models.CreatedBot{Id: b.Id}
+	if err := o.Read(&fresh); err != nil {
+		sendUserBot(bot, chatID, "❌ Ma'lumot topilmadi.")
+		return
+	}
+
+	text := "💳 Karta ma'lumotini yuboring.\n\nMasalan:\n8600 1234 .... ....	\nAliyev Ali"
+	if strings.TrimSpace(fresh.Card) != "" {
+		text = fmt.Sprintf("💳 Joriy karta:\n\n%s\n\nYangisini almashtirish uchun yangi karta ma'lumotini yuboring:", fresh.Card)
+	}
+
+	mu.Lock()
+	adminState[userID] = "waiting_vip_card"
+	mu.Unlock()
+
+	sendUserBot(bot, chatID, text+"\n\n(Bekor qilish: /cancel)")
 }
 
 func showAsosiyPanelProprKino(bot *tgbotapi.BotAPI, chatID int64) {
@@ -657,27 +698,13 @@ func handleKinoByCodePro(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgbota
 
 	// ========== VIEWS COUNT OSHIRISH ==========
 	if kino.IsVipOnly && !isAdmin(b, userID) && !botUser.IsVip {
-		// Owner munosabat (relation) bo'lgani uchun, ehtimol yuklanmagan bo'ladi
-		if b.Owner != nil && b.Owner.TgId == 0 {
-			o.LoadRelated(b, "Owner")
-		}
-
-		contactURL := ""
-		if b.Owner != nil && b.Owner.TgId != 0 {
-			contactURL = fmt.Sprintf("tg://user?id=%d", b.Owner.TgId)
-		}
-
 		m := tgbotapi.NewMessage(msg.Chat.ID,
-			"🔒 Bu kino faqat VIP foydalanuvchilar uchun.\n\nVIP olish uchun admin bilan bog'laning.")
-
-		if contactURL != "" {
-			m.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(
-				tgbotapi.NewInlineKeyboardRow(
-					tgbotapi.NewInlineKeyboardButtonURL("Bog'lanish", contactURL),
-				),
-			)
-		}
-
+			"🔒 Bu kino faqat VIP foydalanuvchilar uchun.\n\nVIP olish uchun pastdagi tugmani bosing 👇")
+		m.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(
+			tgbotapi.NewInlineKeyboardRow(
+				tgbotapi.NewInlineKeyboardButtonData("💎 VIP olish", fmt.Sprintf("vip_prices_%d", b.Id)),
+			),
+		)
 		bot.Send(m)
 		return
 	}

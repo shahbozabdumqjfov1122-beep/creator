@@ -220,6 +220,164 @@ func HandleUserBotCallbackQuery(bot *tgbotapi.BotAPI, b *models.CreatedBot, cb *
 		bot.Send(m)
 		return
 
+	case data == "vip_card_add":
+		if !isAdmin(b, userID) {
+			return
+		}
+		mu.Lock()
+		adminState[userID] = "waiting_vip_card"
+		mu.Unlock()
+		sendUserBot(bot, chatID, "💳 Karta ma'lumotini yuboring.\n\nMasalan:\n8600 1234 5678 9012\nAliyev Ali")
+		return
+
+	case strings.HasPrefix(data, "vip_buy:"):
+		idx, err := strconv.Atoi(strings.TrimPrefix(data, "vip_buy:"))
+		if err != nil || idx < 0 {
+			sendUserBot(bot, chatID, "❌ Noto'g'ri tarif tanlandi.")
+			return
+		}
+
+		o := orm.NewOrm()
+		fresh := models.CreatedBot{Id: b.Id}
+		if err := o.Read(&fresh); err != nil {
+			sendUserBot(bot, chatID, "❌ Ma'lumot topilmadi.")
+			return
+		}
+
+		lines := parseVipLines(fresh.VipPrices)
+		if idx >= len(lines) {
+			sendUserBot(bot, chatID, "❌ Bu tarif mavjud emas yoki o'chirilgan.")
+			return
+		}
+
+		card := strings.TrimSpace(fresh.Card)
+		if card == "" {
+			sendUserBot(bot, chatID, "⚠️ Karta hali kiritilmagan. Admin bilan bog'laning.")
+			return
+		}
+
+		selectedTariff := strings.TrimSpace(lines[idx])
+		text := fmt.Sprintf("💎 Tarif: %s\n\n💳 To'lov uchun karta:\n`%s`\n\nTo'lovni amalga oshirgach, pastdagi tugmani bosing 👇",
+			selectedTariff, card)
+
+		m := tgbotapi.NewMessage(chatID, text)
+		m.ParseMode = "Markdown"
+		m.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(
+			tgbotapi.NewInlineKeyboardRow(
+				tgbotapi.NewInlineKeyboardButtonData("✅ To'lov qildim", fmt.Sprintf("vip_paid:%d", idx)),
+			),
+		)
+		bot.Send(m)
+		return
+
+	case strings.HasPrefix(data, "vip_paid:"):
+		idxStr := strings.TrimPrefix(data, "vip_paid:")
+		idx, err := strconv.Atoi(idxStr)
+		if err != nil || idx < 0 {
+			sendUserBot(bot, chatID, "❌ Noto'g'ri tarif tanlovi.")
+			return
+		}
+
+		// Bazadan tarif hali ham mavjudligini qayta tekshiramiz
+		o := orm.NewOrm()
+		fresh := models.CreatedBot{Id: b.Id}
+		if err := o.Read(&fresh); err != nil {
+			sendUserBot(bot, chatID, "❌ Bot ma'lumotlari topilmadi.")
+			return
+		}
+
+		lines := parseVipLines(fresh.VipPrices)
+		if idx >= len(lines) {
+			sendUserBot(bot, chatID, "❌ Ushbu tarif endi mavjud emas.")
+			return
+		}
+
+		// State update mutex bilan
+		mu.Lock()
+		adminState[userID] = fmt.Sprintf("waiting_vip_check:%d", idx)
+		mu.Unlock()
+
+		sendUserBot(bot, chatID, "🧾 **To'lov chekini (rasm/skrinshot) yuboring:**")
+		return
+
+	case strings.HasPrefix(data, "vip_pay_ok:") || strings.HasPrefix(data, "vip_pay_no:"):
+		if !isAdmin(b, userID) { // Faqat admin tasdiqlay oladi
+			return
+		}
+
+		approve := strings.HasPrefix(data, "vip_pay_ok:")
+
+		// "vip_pay_ok:12345678:0" -> prefiksni olib tashlaymiz
+		rawPayload := strings.TrimPrefix(strings.TrimPrefix(data, "vip_pay_ok:"), "vip_pay_no:")
+		parts := strings.Split(rawPayload, ":")
+
+		if len(parts) < 1 {
+			sendUserBot(bot, chatID, "❌ Noto'g'ri ma'lumot formati.")
+			return
+		}
+
+		// Birinchi qiymat (targetID - foydalanuvchi TG ID)
+		targetID, err := strconv.ParseInt(parts[0], 10, 64)
+		if err != nil {
+			log.Printf("VIP Pay parsing error: %v", err)
+			return
+		}
+
+		// Ikkinchi qiymat (idx - tarif indeksi)
+		idx := 0
+		if len(parts) >= 2 {
+			idx, _ = strconv.Atoi(parts[1])
+		}
+
+		// Tugmalarni olib tashlaymiz (qayta bosilmasligi uchun)
+		bot.Request(tgbotapi.NewEditMessageReplyMarkup(chatID, cb.Message.MessageID,
+			tgbotapi.InlineKeyboardMarkup{InlineKeyboard: [][]tgbotapi.InlineKeyboardButton{}}))
+
+		if approve {
+			o := orm.NewOrm()
+
+			// 1. Bot tariflarini bazadan o'qiymiz
+			fresh := models.CreatedBot{Id: b.Id}
+			_ = o.Read(&fresh)
+
+			tariffText := ""
+			if lines := parseVipLines(fresh.VipPrices); idx >= 0 && idx < len(lines) {
+				tariffText = lines[idx]
+			}
+
+			// 2. Muddatni hisoblaymiz
+			vipUntil := parseVipDuration(tariffText)
+
+			// 3. Foydalanuvchini bazadan topamiz va yangilaymiz
+			var bu models.BotUser
+			err := o.QueryTable(new(models.BotUser)).
+				Filter("Bot__Id", b.Id).
+				Filter("TgId", targetID).
+				One(&bu)
+
+			if err != nil {
+				sendUserBot(bot, chatID, "❌ Foydalanuvchi bot bazasidan topilmadi.")
+				return
+			}
+
+			bu.IsVip = true
+			bu.VipUntil = vipUntil
+
+			// IsVip va VipUntil ustunlarini bazaga saqlaymiz
+			if _, err := o.Update(&bu, "IsVip", "VipUntil"); err != nil {
+				sendUserBot(bot, chatID, "❌ VIP berishda xatolik: "+err.Error())
+				return
+			}
+
+			untilStr := vipUntil.Format("02.01.2006 15:04")
+			sendUserBot(bot, chatID, fmt.Sprintf("✅ ID %d uchun to'lov tasdiqlandi!\n💎 VIP berildi. Muddat: %s gacha", targetID, untilStr))
+			sendUserBot(bot, targetID, fmt.Sprintf("🎉 To'lovingiz tasdiqlandi!\n\n💎 VIP obunangiz faollashtirildi.\n⏳ Amal qilish muddati: **%s** gacha", untilStr))
+		} else {
+			sendUserBot(bot, chatID, fmt.Sprintf("❌ ID %d ning to'lovi rad etildi.", targetID))
+			sendUserBot(bot, targetID, "❌ To'lovingiz tasdiqlanmadi. Savollar bo'lsa admin bilan bog'laning.")
+		}
+		return
+
 	case strings.HasPrefix(data, "kino_page:") ||
 		strings.HasPrefix(data, "kino_part:") ||
 		strings.HasPrefix(data, "kino_select_") ||

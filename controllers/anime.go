@@ -1286,7 +1286,6 @@ func RouteUserManagementState(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *t
 		mu.Lock()
 		delete(adminState, userID)
 		mu.Unlock()
-		showAdminsPanel(bot, chatID)
 		return true
 
 	}
@@ -1305,7 +1304,6 @@ func RouteUserManagementState(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *t
 			mu.Lock()
 			delete(adminState, userID)
 			mu.Unlock()
-			showAdminsPanel(bot, chatID)
 			return true
 		}
 
@@ -1326,7 +1324,6 @@ func RouteUserManagementState(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *t
 		mu.Lock()
 		delete(adminState, userID)
 		mu.Unlock()
-		showAdminsPanel(bot, chatID)
 		return true
 	}
 
@@ -1355,7 +1352,6 @@ func RouteUserManagementState(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *t
 		mu.Lock()
 		delete(adminState, userID)
 		mu.Unlock()
-		showUsersPanel(bot, chatID)
 		return true
 	}
 
@@ -1384,7 +1380,6 @@ func RouteUserManagementState(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *t
 		mu.Lock()
 		delete(adminState, userID)
 		mu.Unlock()
-		showUsersPanel(bot, chatID)
 		return true
 	}
 
@@ -1413,7 +1408,6 @@ func RouteUserManagementState(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *t
 		mu.Lock()
 		delete(adminState, userID)
 		mu.Unlock()
-		showUsersPanel(bot, chatID)
 		return true
 	}
 
@@ -1442,7 +1436,6 @@ func RouteUserManagementState(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *t
 		mu.Lock()
 		delete(adminState, userID)
 		mu.Unlock()
-		showUsersPanel(bot, chatID)
 		return true
 	}
 

@@ -15,13 +15,39 @@ import (
 
 var (
 	adminState       = make(map[int64]string)
-	adminKinoID      = make(map[int64]int64) // ← yangi
+	adminKinoID      = make(map[int64]int64)
 	adminTempChannel = make(map[int64]int64)
-	quickAnimeTemp   = make(map[int64]string) // 🎯 shu qatorni qo'shing
+	quickAnimeTemp   = make(map[int64]string)
 	quickKinoTemp    = make(map[int64]string)
-	pendingSearch    = make(map[int64]string) // 🎯 obuna kutilayotgan qidiruv kodi
-
+	pendingSearch    = make(map[int64]string)
 )
+
+func parseVipDuration(tariffText string) time.Time {
+	now := time.Now()
+	lower := strings.ToLower(tariffText)
+
+	// Tarif matnidan kun/oy/yilni qidiramiz
+	if strings.Contains(lower, "7 kun") {
+		return now.AddDate(0, 0, 7)
+	} else if strings.Contains(lower, "10 kun") {
+		return now.AddDate(0, 0, 10)
+	} else if strings.Contains(lower, "15 kun") {
+		return now.AddDate(0, 0, 15)
+	} else if strings.Contains(lower, "1 oy") {
+		return now.AddDate(0, 1, 0)
+	} else if strings.Contains(lower, "3 oy") {
+		return now.AddDate(0, 3, 0)
+	} else if strings.Contains(lower, "6 oy") {
+		return now.AddDate(0, 6, 0)
+	} else if strings.Contains(lower, "1 yil") {
+		return now.AddDate(1, 0, 0)
+	} else if strings.Contains(lower, "cheksiz") {
+		return now.AddDate(100, 0, 0) // 100 yil
+	}
+
+	// Agar tarif matnida aniq muddat topilmasa, standart 1 oy (30 kun) beriladi
+	return now.AddDate(0, 1, 0)
+}
 
 func parseChannelID(bot *tgbotapi.BotAPI, msg *tgbotapi.Message) (int64, error) {
 	if msg.ForwardFromChat != nil {
@@ -60,6 +86,7 @@ func parseChannelID(bot *tgbotapi.BotAPI, msg *tgbotapi.Message) (int64, error) 
 
 func HandleAdminCommands(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgbotapi.Message) {
 	userID := msg.From.ID
+	chatID := msg.Chat.ID
 
 	log.Printf("🟣 [HandleAdminCommands] boshlandi. UserID=%d, BotID=%d, Text=%q", userID, b.Id, msg.Text)
 
@@ -68,7 +95,7 @@ func HandleAdminCommands(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgbota
 		adminState[userID] = "wait_channel"
 		mu.Unlock()
 		log.Printf("🟢 [HandleAdminCommands] state='wait_channel' o'rnatildi. UserID=%d", userID)
-		sendUserBot(bot, msg.Chat.ID, "📢 Kanal ID yoki @username yuboring...")
+		sendUserBot(bot, chatID, "📢 Kanal ID yoki @username yuboring...")
 		return
 	}
 
@@ -77,7 +104,29 @@ func HandleAdminCommands(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgbota
 		adminState[userID] = "wait_vip_name"
 		mu.Unlock()
 		log.Printf("🟢 [HandleAdminCommands] state='wait_vip_name' o'rnatildi. UserID=%d", userID)
-		sendUserBot(bot, msg.Chat.ID, "tarif nomini yuboring.\nMasalan: 1 oylik obuna")
+
+		// 🎛 Administrator uchun VIP muddatlari tugmalarini yaratamiz
+		keyboard := tgbotapi.NewReplyKeyboard(
+			tgbotapi.NewKeyboardButtonRow(
+				tgbotapi.NewKeyboardButton("7 kun"),
+				tgbotapi.NewKeyboardButton("10 kun"),
+				tgbotapi.NewKeyboardButton("15 kun"),
+			),
+			tgbotapi.NewKeyboardButtonRow(
+				tgbotapi.NewKeyboardButton("1 oy"),
+				tgbotapi.NewKeyboardButton("3 oy"),
+				tgbotapi.NewKeyboardButton("6 oy"),
+			),
+			tgbotapi.NewKeyboardButtonRow(
+				tgbotapi.NewKeyboardButton("1 yil"),
+				tgbotapi.NewKeyboardButton("Cheksiz"),
+			),
+		)
+		keyboard.ResizeKeyboard = true
+
+		replyMsg := tgbotapi.NewMessage(chatID, "⏳ Iltimos, VIP tarif muddatini pastdagi tugmalardan tanlang yoki o'zingiz yozing:")
+		replyMsg.ReplyMarkup = keyboard
+		bot.Send(replyMsg)
 		return
 	}
 
@@ -99,16 +148,15 @@ func HandleAdminCommands(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgbota
 		if err != nil {
 			log.Printf("🔴 [wait_channel] parseChannelID xatosi: %v", err)
 
-			// 🎯 FIX: Admin xato matn yuborganida statelarni tozalaymiz, bot tiqilib qolmaydi!
 			mu.Lock()
 			delete(adminState, userID)
 			delete(adminTempChannel, userID)
 			mu.Unlock()
 
 			if err.Error() == "id_format_error" {
-				sendUserBot(bot, msg.Chat.ID, "❌ Noto‘g‘ri channel ID yoki username formati! Jarayon bekor qilindi.")
+				sendUserBot(bot, chatID, "❌ Noto‘g‘ri channel ID yoki username formati! Jarayon bekor qilindi.")
 			} else {
-				sendUserBot(bot, msg.Chat.ID, "❌ Kanal topilmadi yoki bot u yerda admin emas! Jarayon bekor qilindi.")
+				sendUserBot(bot, chatID, "❌ Kanal topilmadi yoki bot u yerda admin emas! Jarayon bekor qilindi.")
 			}
 			log.Printf("🟡 [wait_channel] state tozalandi, jarayon bekor qilindi. UserID=%d", userID)
 			return
@@ -116,23 +164,43 @@ func HandleAdminCommands(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgbota
 
 		log.Printf("🟢 [wait_channel] channelID topildi: %d", channelID)
 
-		// Agar hammasi to'g'ri bo'lsa, keyingi qadamga o'tadi...
 		mu.Lock()
 		adminTempChannel[userID] = channelID
 		adminState[userID] = "wait_link"
 		mu.Unlock()
 
 		log.Printf("🟢 [wait_channel] state='wait_link' ga o'tkazildi. UserID=%d, channelID=%d", userID, channelID)
-		sendUserBot(bot, msg.Chat.ID, "🔗 Endi kanal uchun Invite link yuboring (https://t.me/....)")
+		sendUserBot(bot, chatID, "🔗 Endi kanal uchun Invite link yuboring (https://t.me/....)")
 		return
+	case "waiting_vip_card":
+		cardInfo := strings.TrimSpace(msg.Text)
+		if cardInfo == "" {
+			sendUserBot(bot, chatID, "❌ Karta ma'lumoti bo'sh bo'lishi mumkin emas!")
+			return
+		}
 
+		o := orm.NewOrm()
+		createdBot := models.CreatedBot{Id: b.Id}
+		if err := o.Read(&createdBot); err == nil {
+			createdBot.Card = cardInfo
+			if _, err := o.Update(&createdBot, "Card"); err == nil {
+				mu.Lock()
+				delete(adminState, userID)
+				mu.Unlock()
+
+				sendUserBot(bot, chatID, fmt.Sprintf("✅ Karta ma'lumoti muvaffaqiyatli saqlandi!\n\n💳 Joriy karta:\n%s", cardInfo))
+				return
+			}
+		}
+		sendUserBot(bot, chatID, "❌ Saqlashda xatolik yuz berdi. Qaytadan urinib ko'ring.")
+		return
 	case "wait_link":
 		link := strings.TrimSpace(msg.Text)
 		log.Printf("🟣 [wait_link] link qabul qilindi: %q", link)
 
 		if link == "" || !strings.HasPrefix(link, "http") {
 			log.Printf("🔴 [wait_link] noto'g'ri link format: %q", link)
-			sendUserBot(bot, msg.Chat.ID, "❌ Iltimos, to'g'ri havola (link) yuboring!")
+			sendUserBot(bot, chatID, "❌ Iltimos, to'g'ri havola (link) yuboring!")
 			return
 		}
 
@@ -155,12 +223,12 @@ func HandleAdminCommands(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgbota
 		_, err := o.Insert(&bc)
 		if err != nil {
 			log.Printf("🔴 [wait_link] bazaga saqlashda xatolik: %v", err)
-			sendUserBot(bot, msg.Chat.ID, "❌ Ma'lumotlar bazasiga saqlashda xato yuz berdi.")
+			sendUserBot(bot, chatID, "❌ Ma'lumotlar bazasiga saqlashda xato yuz berdi.")
 			return
 		}
 
 		log.Printf("✅ [wait_link] Kanal muvaffaqiyatli qo'shildi! channelID=%d, BotID=%d", channelID, b.Id)
-		sendUserBot(bot, msg.Chat.ID, fmt.Sprintf("✅ Kanal muvaffaqiyatli qo‘shildi!\n📢 ID: %d", channelID))
+		sendUserBot(bot, chatID, fmt.Sprintf("✅ Kanal muvaffaqiyatli qo‘shildi!\n📢 ID: %d", channelID))
 
 		mu.Lock()
 		delete(adminState, userID)
@@ -170,21 +238,26 @@ func HandleAdminCommands(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgbota
 
 	case "wait_vip_name":
 		name := strings.TrimSpace(msg.Text)
-		log.Printf("🟣 [wait_vip_name] nom qabul qilindi: %q", name)
+		log.Printf("🟣 [wait_vip_name] tarif nomi/muddati tanlandi: %q", name)
 
 		if name == "" {
 			log.Printf("🔴 [wait_vip_name] nom bo'sh")
-			sendUserBot(bot, msg.Chat.ID, "❌ Nom bo'sh bo'lishi mumkin emas. Qaytadan yuboring.")
+			sendUserBot(bot, chatID, "❌ Nom bo'sh bo'lishi mumkin emas. Qaytadan yuboring.")
 			return
 		}
 
 		mu.Lock()
-		quickKinoTemp[userID] = name // 🎯 mavjud mapni qayta ishlatamiz
+		quickKinoTemp[userID] = name
 		adminState[userID] = "wait_vip_price"
 		mu.Unlock()
 
 		log.Printf("🟢 [wait_vip_name] state='wait_vip_price' ga o'tdi. name=%q, UserID=%d", name, userID)
-		sendUserBot(bot, msg.Chat.ID, "Endi shu tarif uchun narxni yuboring.\nMasalan: 15 000 so'm")
+
+		// 🔕 Tugmalarni olib tashlaymiz va narx so'raymiz
+		priceMsg := tgbotapi.NewMessage(chatID, fmt.Sprintf("✅ **%s** tarif tanlandi.\n\n💰 Endi ushbu tarif narxini kiriting:\n(Masalan: 15 000 so'm)", name))
+		priceMsg.ParseMode = "Markdown"
+		priceMsg.ReplyMarkup = tgbotapi.NewRemoveKeyboard(true)
+		bot.Send(priceMsg)
 		return
 
 	case "wait_vip_price":
@@ -193,7 +266,7 @@ func HandleAdminCommands(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgbota
 
 		if price == "" {
 			log.Printf("🔴 [wait_vip_price] narx bo'sh")
-			sendUserBot(bot, msg.Chat.ID, "❌ Narx bo'sh bo'lishi mumkin emas. Qaytadan yuboring.")
+			sendUserBot(bot, chatID, "❌ Narx bo'sh bo'lishi mumkin emas. Qaytadan yuboring.")
 			return
 		}
 
@@ -209,23 +282,32 @@ func HandleAdminCommands(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgbota
 		createdBot := models.CreatedBot{Id: b.Id}
 		if err := o.Read(&createdBot); err != nil {
 			log.Printf("🔴 [wait_vip_price] bot o'qishda xatolik: %v", err)
-			sendUserBot(bot, msg.Chat.ID, "❌ Bot ma'lumotini o'qishda xato.")
+			sendUserBot(bot, chatID, "❌ Bot ma'lumotini o'qishda xato.")
 			return
 		}
 
-		newLine := fmt.Sprintf("💎 VIP Obuna Tariflari\n\n %s - %s\n", name, price)
-		createdBot.VipPrices += newLine
+		// Formatni toza saqlaymiz: "1 oy - 15 000 so'm"
+		newLine := fmt.Sprintf("%s - %s", name, price)
 
-		log.Printf("🔵 [wait_vip_price] yangi qator qo'shilmoqda: %q", newLine)
+		if strings.TrimSpace(createdBot.VipPrices) == "" {
+			createdBot.VipPrices = newLine + "\n"
+		} else {
+			createdBot.VipPrices += newLine + "\n"
+		}
+
+		log.Printf("🔵 [wait_vip_price] yangi tarif qo'shilmoqda: %q", newLine)
 
 		if _, err := o.Update(&createdBot, "VipPrices"); err != nil {
 			log.Printf("🔴 [wait_vip_price] saqlashda xatolik: %v", err)
-			sendUserBot(bot, msg.Chat.ID, "❌ Saqlashda xato yuz berdi.")
+			sendUserBot(bot, chatID, "❌ Saqlashda xato yuz berdi.")
 			return
 		}
 
 		log.Printf("✅ [wait_vip_price] VIP tarif muvaffaqiyatli qo'shildi. name=%q, price=%q, BotID=%d", name, price, b.Id)
-		sendUserBot(bot, msg.Chat.ID, fmt.Sprintf("✅ Qo'shildi:\n%s", newLine))
+
+		resMsg := tgbotapi.NewMessage(chatID, fmt.Sprintf("✅ Yangi VIP tarif qo'shildi:\n💎 %s", newLine))
+		resMsg.ReplyMarkup = tgbotapi.NewRemoveKeyboard(true)
+		bot.Send(resMsg)
 		return
 
 	default:
@@ -239,7 +321,7 @@ func HandleAdminCommands(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgbota
 			name := strings.TrimSpace(msg.Text)
 			if name == "" {
 				log.Printf("🔴 [wait_vip_edit_name] nom bo'sh")
-				sendUserBot(bot, msg.Chat.ID, "❌ Nom bo'sh bo'lishi mumkin emas.")
+				sendUserBot(bot, chatID, "❌ Nom bo'sh bo'lishi mumkin emas.")
 				return
 			}
 
@@ -249,7 +331,10 @@ func HandleAdminCommands(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgbota
 			mu.Unlock()
 
 			log.Printf("🟢 [wait_vip_edit_name] state='wait_vip_edit_price:%d' ga o'tdi. name=%q", idx, name)
-			sendUserBot(bot, msg.Chat.ID, "💰 Endi yangi narxni yuboring:")
+
+			priceMsg := tgbotapi.NewMessage(chatID, "💰 Endi yangi narxni yuboring:")
+			priceMsg.ReplyMarkup = tgbotapi.NewRemoveKeyboard(true)
+			bot.Send(priceMsg)
 			return
 		}
 
@@ -261,7 +346,7 @@ func HandleAdminCommands(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgbota
 			price := strings.TrimSpace(msg.Text)
 			if price == "" {
 				log.Printf("🔴 [wait_vip_edit_price] narx bo'sh")
-				sendUserBot(bot, msg.Chat.ID, "❌ Narx bo'sh bo'lishi mumkin emas.")
+				sendUserBot(bot, chatID, "❌ Narx bo'sh bo'lishi mumkin emas.")
 				return
 			}
 
@@ -277,7 +362,7 @@ func HandleAdminCommands(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgbota
 			createdBot := models.CreatedBot{Id: b.Id}
 			if err := o.Read(&createdBot); err != nil {
 				log.Printf("🔴 [wait_vip_edit_price] bot o'qishda xatolik: %v", err)
-				sendUserBot(bot, msg.Chat.ID, "❌ Ma'lumotni o'qishda xato.")
+				sendUserBot(bot, chatID, "❌ Ma'lumotni o'qishda xato.")
 				return
 			}
 
@@ -286,21 +371,24 @@ func HandleAdminCommands(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgbota
 
 			if idx < 0 || idx >= len(lines) {
 				log.Printf("🔴 [wait_vip_edit_price] idx=%d chegaradan tashqarida (jami=%d)", idx, len(lines))
-				sendUserBot(bot, msg.Chat.ID, "❌ Bu tarif topilmadi (o'chirilgan bo'lishi mumkin).")
+				sendUserBot(bot, chatID, "❌ Bu tarif topilmadi (o'chirilgan bo'lishi mumkin).")
 				return
 			}
 
-			lines[idx] = fmt.Sprintf("%s: %s", name, price)
+			lines[idx] = fmt.Sprintf("%s - %s", name, price)
 			createdBot.VipPrices = strings.Join(lines, "\n") + "\n"
 
 			if _, err := o.Update(&createdBot, "VipPrices"); err != nil {
 				log.Printf("🔴 [wait_vip_edit_price] saqlashda xatolik: %v", err)
-				sendUserBot(bot, msg.Chat.ID, "❌ Saqlashda xato yuz berdi.")
+				sendUserBot(bot, chatID, "❌ Saqlashda xato yuz berdi.")
 				return
 			}
 
 			log.Printf("✅ [wait_vip_edit_price] tarif yangilandi: idx=%d, name=%q, price=%q", idx, name, price)
-			sendUserBot(bot, msg.Chat.ID, fmt.Sprintf("✅ Yangilandi:\n%s: %s", name, price))
+
+			resMsg := tgbotapi.NewMessage(chatID, fmt.Sprintf("✅ Tarif yangilandi:\n💎 %s - %s", name, price))
+			resMsg.ReplyMarkup = tgbotapi.NewRemoveKeyboard(true)
+			bot.Send(resMsg)
 			return
 		}
 
@@ -473,62 +561,145 @@ func ShowChannelsToDelete(bot *tgbotapi.BotAPI, b *models.CreatedBot, chatID int
 	bot.Send(msg)
 }
 
-// Umumiy mantiq: buni ham callback, ham /vip matn buyrug'i ishlatadi.
+func RouteVipPaymentState(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgbotapi.Message, state string) bool {
+	userID := msg.From.ID
+	chatID := msg.Chat.ID
+
+	// --- Admin karta kiritmoqda ---
+	if state == "waiting_vip_card" {
+		if !isAdmin(b, userID) {
+			return false
+		}
+
+		card := strings.TrimSpace(msg.Text)
+		if card == "" {
+			sendUserBot(bot, chatID, "❌ Iltimos, karta ma'lumotini matn ko'rinishida yuboring:")
+			return true
+		}
+
+		o := orm.NewOrm()
+		if _, err := o.QueryTable(new(models.CreatedBot)).
+			Filter("Id", b.Id).
+			Update(orm.Params{"Card": card}); err != nil {
+			sendUserBot(bot, chatID, "❌ Saqlashda xatolik: "+err.Error())
+			return true
+		}
+		b.Card = card
+
+		mu.Lock()
+		delete(adminState, userID)
+		mu.Unlock()
+
+		sendUserBot(bot, chatID, "✅ Karta saqlandi!")
+		return true
+	}
+
+	// --- Foydalanuvchi chek yubormoqda ---
+	if strings.HasPrefix(state, "waiting_vip_check:") {
+		if len(msg.Photo) == 0 {
+			sendUserBot(bot, chatID, "❌ Iltimos, chekni rasm ko'rinishida yuboring:")
+			return true
+		}
+
+		idx, _ := strconv.Atoi(strings.TrimPrefix(state, "waiting_vip_check:"))
+
+		o := orm.NewOrm()
+		fresh := models.CreatedBot{Id: b.Id}
+		if err := o.Read(&fresh); err != nil {
+			sendUserBot(bot, chatID, "❌ Xatolik yuz berdi.")
+			return true
+		}
+		o.LoadRelated(&fresh, "Owner")
+
+		tariff := "—"
+		if lines := parseVipLines(fresh.VipPrices); idx >= 0 && idx < len(lines) {
+			tariff = strings.TrimSpace(lines[idx])
+		}
+
+		if fresh.Owner == nil || fresh.Owner.TgId == 0 {
+			sendUserBot(bot, chatID, "❌ Admin topilmadi, keyinroq urinib ko'ring.")
+			return true
+		}
+
+		caption := fmt.Sprintf("💳 Yangi to'lov cheki\n\n👤 %s %s\n🆔 ID: %d\n💎 Tarif: %s\n\nTo'lov qilinganmi?",
+			msg.From.FirstName, msg.From.LastName, userID, tariff)
+
+		photo := tgbotapi.NewPhoto(fresh.Owner.TgId, tgbotapi.FileID(msg.Photo[len(msg.Photo)-1].FileID))
+		photo.Caption = caption
+		photo.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(
+			tgbotapi.NewInlineKeyboardRow(
+				tgbotapi.NewInlineKeyboardButtonData("✅ Ha", fmt.Sprintf("vip_pay_ok:%d:%d", userID, idx)),
+				tgbotapi.NewInlineKeyboardButtonData("❌ Yo'q", fmt.Sprintf("vip_pay_no:%d:%d", userID, idx)),
+			),
+		)
+
+		if _, err := bot.Send(photo); err != nil {
+			log.Printf("Chekni adminga yuborishda xatolik: %v", err)
+			sendUserBot(bot, chatID, "❌ Chekni yuborib bo'lmadi, keyinroq urinib ko'ring.")
+			return true
+		}
+
+		mu.Lock()
+		delete(adminState, userID)
+		mu.Unlock()
+
+		sendUserBot(bot, chatID, "✅ Chek adminga yuborildi. Tasdiqlanishini kuting ⏳")
+		return true
+	}
+
+	return false
+}
+
 func sendVipPricesInfoPro(bot *tgbotapi.BotAPI, chatID int64, botID int64) error {
 	o := orm.NewOrm()
 	createdBot := models.CreatedBot{Id: botID}
 
-	err := o.Read(&createdBot)
-	if err != nil {
+	if err := o.Read(&createdBot); err != nil {
 		sendUserBot(bot, chatID, "❌ Ma'lumot topilmadi!")
 		return err
 	}
 
-	o.LoadRelated(&createdBot, "Owner")
-
-	pricesText := createdBot.VipPrices
-	if pricesText == "" {
-		pricesText = "💎 VIP Obuna Tariflari\n\n" +
-			" 1 oylik: 10,000 so'm\n" +
-			" 3 oylik: 25,000 so'm\n" +
-			" Cheksiz (VIP): 50,000 so'm\n\n" +
-			"💳 Sotib olish uchun admin bilan bog'laning!"
-	}
-
+	pricesText := "💎 VIP Obuna Tariflari\n\nKerakli tarifni tanlang 👇"
 	if createdBot.Note != "" {
 		pricesText += fmt.Sprintf("\n\n📌 Eslatma: %s", createdBot.Note)
 	}
 
+	var rows [][]tgbotapi.InlineKeyboardButton
+
+	// Har bir tarif alohida tugma
+	for i, line := range parseVipLines(createdBot.VipPrices) {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		rows = append(rows, tgbotapi.NewInlineKeyboardRow(
+			tgbotapi.NewInlineKeyboardButtonData("💎 "+line, fmt.Sprintf("vip_buy:%d", i)),
+		))
+	}
+
+	if len(rows) == 0 {
+		pricesText = "💎 Hozircha VIP tariflar qo'shilmagan."
+	}
+
+	// Faqat admin ko'radi
+	if isAdmin(&createdBot, chatID) {
+		rows = append(rows, tgbotapi.NewInlineKeyboardRow(
+			tgbotapi.NewInlineKeyboardButtonData("💳 Karta qo'shish", "vip_card_add"),
+		))
+	}
+
 	msg := tgbotapi.NewMessage(chatID, pricesText)
-	msg.ParseMode = "Markdown"
-
-	if createdBot.Owner != nil {
-		var contactURL string
-		if createdBot.Owner.Username != "" {
-			contactURL = "https://t.me/" + createdBot.Owner.Username
-		} else {
-			contactURL = fmt.Sprintf("tg://user?id=%d", createdBot.Owner.TgId)
-		}
-
-		contactBtn := tgbotapi.NewInlineKeyboardButtonURL("💎 sotib olish", contactURL)
-		msg.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(
-			tgbotapi.NewInlineKeyboardRow(contactBtn),
-		)
+	if len(rows) > 0 {
+		msg.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(rows...)
 	}
 
-	if _, sendErr := bot.Send(msg); sendErr != nil {
-		log.Printf("🟡 Markdown xatosi, formatlashsiz qayta yuborilmoqda: %v", sendErr)
-		msg.ParseMode = ""
-		if _, sendErr2 := bot.Send(msg); sendErr2 != nil {
-			log.Printf("🔴 Ikkinchi urinishda ham xato: %v", sendErr2)
-			return sendErr2
-		}
+	if _, err := bot.Send(msg); err != nil {
+		log.Printf("🔴 sendVipPricesInfoPro xatolik: %v", err)
+		return err
 	}
-
 	return nil
 }
 
-// HandleVipPricesCallback — "vip_prices_" tugmasi bosilganda ishga tushadi.
 func HandleVipPricesCallback(bot *tgbotapi.BotAPI, callback *tgbotapi.CallbackQuery, botID int64) {
 	if callback.Message == nil {
 		bot.Request(tgbotapi.NewCallback(callback.ID, "❌ Xabar topilmadi."))
@@ -540,7 +711,6 @@ func HandleVipPricesCallback(bot *tgbotapi.BotAPI, callback *tgbotapi.CallbackQu
 	bot.Request(tgbotapi.NewCallback(callback.ID, ""))
 }
 
-// HandleVipCommand — foydalanuvchi "/vip" matn buyrug'ini yozganda ishga tushadi.
 func HandleVipCommand(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgbotapi.Message) {
 	_ = sendVipPricesInfoPro(bot, msg.Chat.ID, b.Id)
 }

@@ -1464,9 +1464,10 @@ func sendWithProtect(bot *tgbotapi.BotAPI, method string, params tgbotapi.Params
 
 func sendProtectedVideoPro(bot *tgbotapi.BotAPI, chatID int64, fileID, caption string, protect bool) error {
 	params := tgbotapi.Params{
-		"chat_id": strconv.FormatInt(chatID, 10),
-		"video":   fileID,
-		"caption": caption,
+		"chat_id":    strconv.FormatInt(chatID, 10),
+		"video":      fileID,
+		"caption":    caption,
+		"parse_mode": "HTML", // 👈 SHU QATOR QO'SHILDI
 	}
 	if protect {
 		params["protect_content"] = "true"

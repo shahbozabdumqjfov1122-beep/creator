@@ -934,22 +934,15 @@ func sendSingleKinoPartPro(bot *tgbotapi.BotAPI, o orm.Ormer, chatID int64, kino
 		return
 	}
 
-	// 🎬 Yili bor bo'lsa qo'shamiz, bo'lmasa bo'sh qoldiramiz (ortiqcha qoldiq qolmaydi)
-	yearLine := ""
-	if kino.Year > 0 {
-		yearLine = fmt.Sprintf("<tg-emoji emoji-id=\"5987802868734760945\">📅</tg-emoji> Yili: %d\n", kino.Year)
-	}
-
+	// 🎬 Toza va chiroyli format
 	caption := fmt.Sprintf(
 		"<tg-emoji emoji-id=\"5273925011458009292\">🎥</tg-emoji> <b>%s</b>\n\n"+
-			"%s"+
 			"<tg-emoji emoji-id=\"5276277025743607642\">📥</tg-emoji> Yuklab olishlar: %d",
 		kino.Name,
-		yearLine,
 		kino.ViewsCount,
 	)
 
-	// Agar bot osti reklama/eslatma matni bo'lsa qo'shamiz
+	// Agar bot osti reklama/eslatma matni kiritilgan bo'lsa qo'shamiz
 	if botNote != "" {
 		caption += fmt.Sprintf("\n\n%s", botNote)
 	}

@@ -934,14 +934,14 @@ func sendSingleKinoPartPro(bot *tgbotapi.BotAPI, o orm.Ormer, chatID int64, kino
 		return
 	}
 
-	// 🎬 Chiroyli formatlangan caption (sarlavha matni)
+	// 🎬 Yili bor bo'lsa qo'shamiz, bo'lmasa bo'sh qoldiramiz (ortiqcha qoldiq qolmaydi)
 	yearLine := ""
 	if kino.Year > 0 {
 		yearLine = fmt.Sprintf("<tg-emoji emoji-id=\"5987802868734760945\">📅</tg-emoji> Yili: %d\n", kino.Year)
 	}
 
 	caption := fmt.Sprintf(
-		"<tg-emoji emoji-id=\"5273925011458009292\">🎥</tg-emoji><b>%s</b>\n\n"+
+		"<tg-emoji emoji-id=\"5273925011458009292\">🎥</tg-emoji> <b>%s</b>\n\n"+
 			"%s"+
 			"<tg-emoji emoji-id=\"5276277025743607642\">📥</tg-emoji> Yuklab olishlar: %d",
 		kino.Name,

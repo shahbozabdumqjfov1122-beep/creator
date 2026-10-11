@@ -388,14 +388,13 @@ func RouteKinoQuickState(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgbota
 		link := fmt.Sprintf("https://t.me/%s?start=%s", bot.Self.UserName, code)
 
 		text := fmt.Sprintf(
-			"✅ *Kino muvaffaqiyatli joylandi!*\n\n📌 Nomi: %s\n🎬 Qismlar: 1\n🔗 Havola: `%s`",
+			"✅ Kino muvaffaqiyatli joylandi!\n\n📌 Nomi: %s\n🎬 Qismlar: 1\n🔗 Havola: `%s`",
 			name, link,
 		)
 		reply := tgbotapi.NewMessage(chatID, text)
 		reply.ParseMode = "Markdown"
 		bot.Send(reply)
 
-		showKinoAdminPanel(bot, chatID)
 		return true
 	}
 
@@ -922,7 +921,6 @@ func RouteKinoEditState(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgbotap
 		mu.Unlock()
 
 		sendUserBot(bot, chatID, fmt.Sprintf("✅ \"%s\" kino butunlay o'chirildi!", kinoName))
-		showKinoAdminPanel(bot, chatID)
 		return true
 	}
 
@@ -941,7 +939,6 @@ func RouteKinoEditState(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgbotap
 		mu.Unlock()
 
 		sendUserBot(bot, chatID, "✅ Kino kodi muvaffaqiyatli o'zgartirildi!")
-		showKinoAdminPanel(bot, chatID)
 		return true
 	}
 
@@ -959,7 +956,6 @@ func RouteKinoEditState(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgbotap
 		mu.Unlock()
 
 		sendUserBot(bot, chatID, "✅ Kino nomi muvaffaqiyatli o'zgartirildi!")
-		showKinoAdminPanel(bot, chatID)
 		return true
 	}
 
@@ -1011,7 +1007,7 @@ func RouteKinoEditState(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgbotap
 			mu.Unlock()
 
 			sendUserBot(bot, chatID, fmt.Sprintf("✅ Yangi %d-qism muvaffaqiyatli qo'shildi!", newPartOrder))
-			showKinoAdminPanel(bot, chatID)
+
 		}
 		return true
 	}
@@ -1048,7 +1044,7 @@ func RouteKinoEditState(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgbotap
 			mu.Unlock()
 
 			sendUserBot(bot, chatID, fmt.Sprintf("✅ %d-qism muvaffaqiyatli o'chirildi!", partNum))
-			showKinoAdminPanel(bot, chatID)
+
 		} else {
 			sendUserBot(bot, chatID, "❌ Bunday raqamli qism topilmadi. Qaytadan urinib ko'ring:")
 		}
@@ -1074,7 +1070,7 @@ func RouteKinoEditState(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgbotap
 		mu.Unlock()
 
 		sendUserBot(bot, chatID, "✅ Kino bosh sahifa surati muvaffaqiyatli o'zgartirildi!")
-		showKinoAdminPanel(bot, chatID)
+
 		return true
 	}
 

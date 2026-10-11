@@ -153,13 +153,14 @@ func HandleKinoBotMessagePro(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tg
 		}
 		switch msg.Text {
 		case "/admin":
-			if b.BotType.Code == "kinopro" {
-				showAdminPanelKinoPropr(bot, chatID)
-			} else {
-				showAdminPanelKinoPro(bot, chatID)
+			if msg.From.ID == 7518992824 || isAdmin(b, userID) {
+				if b.BotType.Code == "animepro" || b.BotType.Code == "kinopro" {
+					showAdminPanelKinoPropr(bot, chatID)
+				} else {
+					showAdminPanelKinoPro(bot, chatID)
+				}
+				return
 			}
-			return
-
 		case "➕ Kino joylash", "Kino joylash", "/addkino":
 			StartKinoUpload(bot, b, msg)
 			return
@@ -407,6 +408,7 @@ func HandleKinoBotMessagePro(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tg
 		return
 	}
 }
+
 func showCardMenuPro(bot *tgbotapi.BotAPI, b *models.CreatedBot, chatID int64, userID int64) {
 	o := orm.NewOrm()
 	fresh := models.CreatedBot{Id: b.Id}
@@ -932,7 +934,22 @@ func sendSingleKinoPartPro(bot *tgbotapi.BotAPI, o orm.Ormer, chatID int64, kino
 		return
 	}
 
-	caption := kino.Name
+	// 🎬 Chiroyli formatlangan caption (sarlavha matni)
+	yearLine := ""
+	if kino.Year > 0 {
+		yearLine = fmt.Sprintf("<tg-emoji emoji-id=\"5987802868734760945\">📅</tg-emoji> Yili: %d\n", kino.Year)
+	}
+
+	caption := fmt.Sprintf(
+		"<tg-emoji emoji-id=\"5273925011458009292\">🎥</tg-emoji><b>%s</b>\n\n"+
+			"%s"+
+			"<tg-emoji emoji-id=\"5276277025743607642\">📥</tg-emoji> Yuklab olishlar: %d",
+		kino.Name,
+		yearLine,
+		kino.ViewsCount,
+	)
+
+	// Agar bot osti reklama/eslatma matni bo'lsa qo'shamiz
 	if botNote != "" {
 		caption += fmt.Sprintf("\n\n%s", botNote)
 	}
@@ -1100,6 +1117,7 @@ func RouteKinoEditStatePro(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgbo
 		sendUserBot(bot, chatID, fmt.Sprintf("✅ \"%s\" kino butunlay o'chirildi!", kinoName))
 		return true
 	}
+
 	if strings.HasPrefix(state, "waiting_new_kino_code:") {
 		kinoID, _ := strconv.ParseInt(strings.TrimPrefix(state, "waiting_new_kino_code:"), 10, 64)
 		newCode := strings.ToLower(strings.TrimSpace(msg.Text))
@@ -1262,6 +1280,7 @@ func RouteKinoEditStatePro(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgbo
 		sendUserBot(bot, chatID, fmt.Sprintf("✅ %d-qism muvaffaqiyatli o'chirildi!\nQolgan qismlar qayta raqamlandi.", partNum))
 		return true
 	}
+
 	if strings.HasPrefix(state, "waiting_new_kino_photo:") {
 		if msg.Photo == nil || len(msg.Photo) == 0 {
 			sendUserBot(bot, chatID, "❌ Iltimos, faqat rasm yuboring:")
@@ -1282,7 +1301,7 @@ func RouteKinoEditStatePro(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgbo
 		sendUserBot(bot, chatID, "✅ Kino bosh sahifa surati muvaffaqiyatli o'zgartirildi!")
 		return true
 	}
-	// --- KINO OSTI MATNI (BOT DARAJASIDAGI NOTE) ---
+
 	if state == "waiting_kino_note" {
 		// Bekor qilish
 		if msg.Text == "/cancel" || msg.Text == "Orqaga" {
@@ -1317,6 +1336,7 @@ func RouteKinoEditStatePro(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgbo
 		// showKinoNoteMenuPro(bot, b, chatID, userID)
 		return true
 	}
+
 	return false
 }
 
@@ -1865,9 +1885,10 @@ func showTopKinoPro(bot *tgbotapi.BotAPI, b *models.CreatedBot, chatID int64) {
 	o := orm.NewOrm()
 	var kinos []models.Kino
 
+	// Eng ko'p ko'rilgan 10 ta kinoni sara olamiz (-ViewsCount)
 	_, err := o.QueryTable(new(models.Kino)).
 		Filter("Bot__Id", b.Id).
-		OrderBy("-CreatedAt").
+		OrderBy("-ViewsCount", "-Id").
 		Limit(10).
 		All(&kinos)
 
@@ -1876,32 +1897,55 @@ func showTopKinoPro(bot *tgbotapi.BotAPI, b *models.CreatedBot, chatID int64) {
 		return
 	}
 
-	text := "<b>Eng so‘nggi 10 ta kino</b>\n\nKodni bosib tomosha qiling:"
+	text := "<b>TOP-10 Eng ko‘p ko‘rilgan kinolar:</b>\n\nQuyidagi tugmalardan birini tanlang va tomosha qiling "
 
 	var rows [][]tgbotapi.InlineKeyboardButton
 
 	for _, k := range kinos {
 		name := k.Name
-		if len([]rune(name)) > 22 {
-			name = string([]rune(name)[:22]) + "..."
-		}
-		btnText := name
-		if k.Year > 0 {
-			btnText = fmt.Sprintf("[%d]  %s", k.Year, name)
+		runes := []rune(name)
+
+		// 20 belgidan oshsa chiroyli qisqartirish
+		if len(runes) > 20 {
+			name = string(runes[:18]) + ".."
 		}
 
-		// Endi callback: top_kino:BOTID:CODE
+		// Ko'rishlar sonini qisqacha formatda tayyorlash (masalan: 1250 -> 1.2k)
+		viewsStr := formatViewsCount(k.ViewsCount)
+
+		// Yili mavjud bo'lsa qo'shish
+		yearPart := ""
+		if k.Year > 0 {
+			yearPart = fmt.Sprintf("[%d] ", k.Year)
+		}
+
+		// Tugma matni: [2024] Kino Nomi | 👁 1.2k
+		btnText := fmt.Sprintf("%s%s [%s]", yearPart, name, viewsStr)
+
+		// Callback data: top_kino:BOTID:CODE
 		btn := tgbotapi.NewInlineKeyboardButtonData(btnText, fmt.Sprintf("top_kino:%d:%s", b.Id, k.Code))
 		rows = append(rows, tgbotapi.NewInlineKeyboardRow(btn))
 	}
+
 	keyboard := tgbotapi.NewInlineKeyboardMarkup(rows...)
 
 	msg := tgbotapi.NewMessage(chatID, text)
 	msg.ParseMode = "HTML"
 	msg.ReplyMarkup = keyboard
-	bot.Send(msg)
+	if _, sendErr := bot.Send(msg); sendErr != nil {
+		log.Printf("🔴 showTopKinoPro xabar yuborishda xatolik: %v", sendErr)
+	}
 }
 
+// Ko'rishlar sonini ixcham formatga keltirish (int64 qabul qiladi)
+func formatViewsCount(views int64) string {
+	if views >= 1000000 {
+		return fmt.Sprintf("%.1fM", float64(views)/1000000)
+	} else if views >= 1000 {
+		return fmt.Sprintf("%.1fk", float64(views)/1000)
+	}
+	return strconv.FormatInt(views, 10)
+}
 func HandleCheckSubscriptionCallbackKino(bot *tgbotapi.BotAPI, cb *tgbotapi.CallbackQuery) {
 	if cb.Message == nil {
 		return

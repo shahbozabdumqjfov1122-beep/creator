@@ -1,989 +1,398 @@
 <!DOCTYPE html>
-<html lang="uz">
+<html lang="uz" data-theme="dark">
 <head>
     <meta charset="UTF-8">
-    <title>
-        {{if .Bot}}{{.Bot.BotName}} - Bot Detail{{else}}AdminPanel - Dashboard{{end}}
-    </title>
+    <title>{{if .Bot}}{{.Bot.BotName}} - Bot Detail{{else}}AdminPanel - Dashboard{{end}}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.11.0/dist/tabler-icons.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="../static/bootstrap-5.3.3-dist/css/bootstrap.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
     <style>
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0
-        }
-
-        body {
-            font-family: 'Inter', sans-serif;
-            background: #080e1c;
-            color: #e2e8f0;
-            min-height: 100vh
-        }
-
-        /* SIDEBAR */
-        .sidebar {
-            position: fixed;
-            left: 0;
-            top: 0;
-            bottom: 0;
-            width: 220px;
-            background: #0d1526;
-            border-right: 1px solid #1e2d47;
-            display: flex;
-            flex-direction: column;
-            padding: 20px 0;
-            z-index: 100
-        }
-
-        .sidebar-logo {
-            padding: 0 20px 22px;
-            border-bottom: 1px solid #1e2d47;
-            font-size: 17px;
-            font-weight: 700;
-            color: #fff
-        }
-
-        .sidebar-logo span {
-            color: #3b82f6
-        }
-
-        .sidebar-nav {
-            padding: 16px 10px;
-            display: flex;
-            flex-direction: column;
-            gap: 3px
-        }
-
-        .nav-item {
-            display: flex;
-            align-items: center;
-            gap: 9px;
-            padding: 9px 12px;
-            border-radius: 10px;
-            color: #64748b;
-            text-decoration: none;
-            font-size: 13px;
-            font-weight: 500;
-            transition: all .2s
-        }
-
-        .nav-item:hover {
-            background: #1e2d47;
-            color: #cbd5e1
-        }
-
-        .nav-item.active {
-            background: #1d3461;
-            color: #60a5fa
-        }
-
-        .nav-item i {
-            font-size: 16px;
-            width: 18px;
-            text-align: center
-        }
-
-        /* MAIN */
-        .main {
-            margin-left: 220px;
-            padding: 28px;
-            min-height: 100vh
-        }
-
-        /* TOPBAR */
-        .topbar {
-            position: fixed;
-            top: 0;
-            left: 220px;
-            right: 0;
-            height: 48px;
-            background: #0d1526;
-            border-bottom: 1px solid #1e2d47;
-            display: flex;
-            align-items: center;
-            justify-content: flex-end;
-            padding: 0 24px;
-            gap: 12px;
-            z-index: 99
-        }
-
-        .topbar-badge {
-            font-size: 11px;
-            padding: 3px 10px;
-            border-radius: 20px;
-            background: #052e1620;
-            color: #22c55e;
-            border: 1px solid #22c55e30;
-            font-weight: 600;
-            display: inline-flex;
-            align-items: center;
-            gap: 4px
-        }
-
-        .main {
-            margin-left: 220px;
-            padding: 28px;
-            padding-top: 72px;
-            min-height: 100vh
-        }
-
-        /* BREADCRUMB */
-        .breadcrumb {
-            display: flex;
-            align-items: center;
-            gap: 7px;
-            font-size: 12px;
-            color: #475569;
-            margin-bottom: 20px
-        }
-
-        .breadcrumb a {
-            color: #3b82f6;
-            text-decoration: none
-        }
-
-        .breadcrumb a:hover {
-            text-decoration: underline
-        }
-
-        .breadcrumb i {
-            font-size: 11px
-        }
-
-        /* CARD */
-        .card {
-            background: linear-gradient(145deg, #111827, #0f1a2e);
-            border: 1px solid #1e2d47;
-            border-radius: 14px;
-            padding: 20px;
-            margin-bottom: 16px;
-            position: relative;
-            overflow: hidden
-        }
-
-        .card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 1px;
-            background: linear-gradient(90deg, transparent, #3b82f620, transparent)
-        }
-
-        .card-title {
-            font-size: 14px;
-            font-weight: 600;
-            color: #f1f5f9;
-            margin-bottom: 16px;
-            display: flex;
-            align-items: center;
-            gap: 7px
-        }
-
-        .card-title i {
-            font-size: 16px;
-            color: #64748b
-        }
-
-        /* BOT HEADER */
-        .bot-header {
-            display: flex;
-            align-items: center;
-            gap: 14px;
-            margin-bottom: 20px
-        }
-
-        .bot-avatar {
-            width: 52px;
-            height: 52px;
-            border-radius: 14px;
-            background: linear-gradient(135deg, #1d4ed8, #7c3aed);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0
-        }
-
-        .bot-avatar i {
-            font-size: 24px;
-            color: #fff
-        }
-
-        .bot-name-wrap {
-            flex: 1
-        }
-
-        .bot-name {
-            font-size: 20px;
-            font-weight: 700;
-            color: #fff
-        }
-
-        .bot-username {
-            color: #3b82f6;
-            font-size: 13px;
-            font-weight: 500;
-            margin-top: 2px
-        }
-
-        /* STATUS BADGE */
-        .status-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 5px;
-            padding: 5px 12px;
-            border-radius: 20px;
-            font-size: 11px;
-            font-weight: 700;
-            letter-spacing: .4px
-        }
-
-        .badge-active {
-            background: #052e1620;
-            color: #22c55e;
-            border: 1px solid #22c55e30
-        }
-
-        .badge-active::before {
-            content: '';
-            width: 5px;
-            height: 5px;
-            border-radius: 50%;
-            background: #22c55e;
-            animation: pulse 2s infinite
-        }
-
-        .badge-off {
-            background: #1f0a0a30;
-            color: #ef4444;
-            border: 1px solid #ef444430
-        }
-
-        .badge-off::before {
-            content: '';
-            width: 5px;
-            height: 5px;
-            border-radius: 50%;
-            background: #ef4444
-        }
-
-        @keyframes pulse {
-            0%, 100% {
-                box-shadow: 0 0 0 0 #22c55e60
-            }
-            50% {
-                box-shadow: 0 0 0 5px #22c55e00
-            }
-        }
-
-        /* INFO GRID */
-        .info-grid {
-            display: grid;
-            grid-template-columns:repeat(auto-fit, minmax(180px, 1fr));
-            gap: 10px
-        }
-
-        .info-item {
-            background: #080e1c;
-            border: 1px solid #1e2d47;
-            border-radius: 10px;
-            padding: 12px 14px;
-            transition: border-color .2s
-        }
-
-        .info-item:hover {
-            border-color: #3b82f640
-        }
-
-        .info-label {
-            font-size: 10px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: .7px;
-            color: #475569;
-            margin-bottom: 5px
-        }
-
-        .info-value {
-            font-size: 13px;
-            font-weight: 600;
-            color: #e2e8f0
-        }
-
-        /* STATS */
-        .stats-row {
-            display: grid;
-            grid-template-columns:repeat(3, 1fr);
-            gap: 10px;
-            margin-bottom: 16px
-        }
-
-        .stat-card {
-            background: #111827;
-            border: 1px solid #1e2d47;
-            border-radius: 12px;
-            padding: 16px;
-            text-align: center
-        }
-
-        .stat-num {
-            font-size: 28px;
-            font-weight: 800;
-            line-height: 1
-        }
-
-        .stat-label {
-            font-size: 10px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: .7px;
-            color: #475569;
-            margin-top: 5px
-        }
-
-        /* TOKEN */
-        .token-box {
-            background: #080e1c;
-            border: 1px solid #1e2d47;
-            border-radius: 10px;
-            padding: 14px;
-            font-family: 'Courier New', monospace;
-            font-size: 12px;
-            color: #64748b;
-            word-break: break-all;
-            letter-spacing: .4px;
-            margin-bottom: 12px
-        }
-
-        /* BUTTONS */
-        .btn-group {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px
-        }
-
-        .btn {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            padding: 8px 16px;
-            border-radius: 9px;
-            font-size: 12px;
-            font-weight: 600;
-            cursor: pointer;
-            text-decoration: none;
-            border: none;
-            transition: all .2s;
-            font-family: 'Inter', sans-serif
-        }
-
-        .btn i {
-            font-size: 14px
-        }
-
-        .btn-primary {
-            background: linear-gradient(135deg, #2563eb, #1d4ed8);
-            color: #fff;
-            box-shadow: 0 3px 10px #3b82f630
-        }
-
-        .btn-primary:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 5px 16px #3b82f640
-        }
-
-        .btn-danger {
-            background: linear-gradient(135deg, #dc2626, #b91c1c);
-            color: #fff
-        }
-
-        .btn-danger:hover {
-            transform: translateY(-1px)
-        }
-
-        .btn-success {
-            background: linear-gradient(135deg, #16a34a, #15803d);
-            color: #fff
-        }
-
-        .btn-success:hover {
-            transform: translateY(-1px)
-        }
-
-        .btn-warning {
-            background: linear-gradient(135deg, #d97706, #b45309);
-            color: #fff
-        }
-
-        .btn-warning:hover {
-            transform: translateY(-1px)
-        }
-
-        .btn-ghost {
-            background: #1e2d47;
-            color: #94a3b8;
-            border: 1px solid #334155
-        }
-
-        .btn-ghost:hover {
-            background: #253347;
-            color: #e2e8f0;
-            transform: translateY(-1px)
-        }
-
-        /* TABLE */
-        .table-wrap {
-            overflow-x: auto;
-            border-radius: 10px;
-            border: 1px solid #1e2d47
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse
-        }
-
-        thead th {
-            background: #080e1c;
-            padding: 10px 14px;
-            text-align: left;
-            font-size: 10px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: .7px;
-            color: #475569;
-            border-bottom: 1px solid #1e2d47;
-            white-space: nowrap
-        }
-
-        tbody tr {
-            cursor: pointer;
-            transition: background .15s
-        }
-
-        tbody tr:hover {
-            background: #0f1a2e
-        }
-
-        tbody td {
-            padding: 11px 14px;
-            border-bottom: 1px solid #0f172a;
-            font-size: 12px;
-            color: #cbd5e1;
-            vertical-align: middle
-        }
-
-        tbody tr:last-child td {
-            border-bottom: none
-        }
-
-        .row-id {
-            font-size: 11px;
-            color: #475569;
-            font-weight: 600;
-            font-family: monospace
-        }
-
-        .mono-badge {
-            font-family: monospace;
-            background: #1e2d47;
-            color: #64748b;
-            padding: 2px 7px;
-            border-radius: 5px;
-            font-size: 11px
-        }
-
-        /* USER CELL */
-        .user-cell {
-            display: flex;
-            align-items: center;
-            gap: 9px
-        }
-
-        .user-mini-avatar {
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            overflow: hidden;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
-            background: #1e293b;
-            font-weight: 600;
-            font-size: 14px;
-            color: #94a3b8;
-            text-transform: uppercase;
-        }
-
-        .user-cell {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .user-full-name {
-            font-weight: 600;
-            color: #e2e8f0;
-            font-size: 12px
-        }
-
-        .user-username-small {
-            color: #3b82f6;
-            font-size: 11px;
-            margin-top: 1px
-        }
-
-        /* VIEW LINK */
-        .view-link {
-            color: #3b82f6;
-            text-decoration: none;
-            font-size: 11px;
-            font-weight: 600;
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
-            padding: 4px 10px;
-            border-radius: 7px;
-            background: #1d3461;
-            border: 1px solid #2563eb30;
-            transition: all .2s;
-            white-space: nowrap
-        }
-
-        .view-link:hover {
-            background: #2563eb;
-            color: #fff;
-            transform: translateY(-1px)
-        }
-
-        /* EDIT FORM */
-        .form-group {
-            display: flex;
-            flex-direction: column;
-            gap: 5px;
-            margin-bottom: 14px
-        }
-
-        .form-label {
-            font-size: 10px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: .6px;
-            color: #475569
-        }
-
-        .form-input {
-            background: #080e1c;
-            border: 1px solid #1e2d47;
-            border-radius: 8px;
-            padding: 9px 12px;
-            font-size: 13px;
-            color: #e2e8f0;
-            font-family: 'Inter', sans-serif;
-            transition: border-color .2s;
-            outline: none;
-            width: 100%
-        }
-
-        .form-input:focus {
-            border-color: #3b82f6
-        }
-
-        .form-input.mono-input {
-            font-family: 'Courier New', monospace
-        }
-
-        /* TOAST */
-        #toast {
-            position: fixed;
-            bottom: 24px;
-            right: 24px;
-            background: #1e2d47;
-            border: 1px solid #334155;
-            color: #e2e8f0;
-            padding: 10px 18px;
-            border-radius: 10px;
-            font-size: 12px;
-            font-weight: 500;
-            z-index: 9999;
-            opacity: 0;
-            transform: translateY(8px);
-            transition: all .3s;
-            pointer-events: none
-        }
-
-        #toast.show {
-            opacity: 1;
-            transform: translateY(0)
-        }
-
-        /* TOKEN BOX */
-        .token-box {
-            background: #0f172a;
-            border: 2px solid #334155;
-            border-radius: 10px;
-            padding: 16px 20px;
-            margin: 16px 0;
-            font-family: 'Courier New', monospace;
-            font-size: 15px;
-            word-break: break-all;
-            position: relative;
-            min-height: 52px;
-            display: flex;
-            align-items: center;
-        }
-
-        .token-masked {
-            color: #94a3b8;
-            letter-spacing: 1px;
-        }
-
-        .token-full {
-            color: #e2e8f0;
-            letter-spacing: 1px;
-        }
-
-        .token-empty {
-            color: #64748b;
-            font-style: italic;
-        }
-
-        /* Button Group */
-        .btn-group {
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-        }
-
-        .btn {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            padding: 10px 16px;
-            border-radius: 8px;
-            font-weight: 500;
-            text-decoration: none;
-            transition: all 0.2s;
-            cursor: pointer;
-            border: none;
-        }
-
-        .btn-ghost {
-            background: #1e2937;
-            color: #e2e8f0;
-        }
-
-        .btn-ghost:hover {
-            background: #334155;
-            transform: translateY(-1px);
-        }
-
-        .btn-warning {
-            background: #f59e0b;
-            color: white;
-        }
-
-        .btn-warning:hover {
-            background: #d97706;
-        }
-
-        /* Card Title */
-        .card-title {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-bottom: 12px;
-            font-weight: 600;
-            color: #e2e8f0;
-        }
-
-        .token-hint {
-            margin-left: auto;
-            font-size: 11px;
-            color: #64748b;
-            font-weight: 400;
-        }
-
-        /* Users Table */
-        .users-table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        .clickable-row {
-            transition: background 0.2s;
-        }
-
-        .clickable-row:hover {
-            background: #1e2937;
-            cursor: pointer;
-        }
-
-        .user-cell {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .user-mini-avatar {
-            width: 38px;
-            height: 38px;
-            background: #334155;
-            color: #60a5fa;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 600;
-            font-size: 16px;
-        }
-
-        .user-full-name {
-            font-weight: 500;
-            color: #e2e8f0;
-        }
-
-        .user-username-small {
-            font-size: 13px;
-            color: #64748b;
-        }
-
-        /* Actions */
-        .actions-cell {
-            text-align: center;
-        }
-
-        .action-buttons {
-            display: flex;
-            gap: 6px;
-            justify-content: center;
-        }
-
-        .btn-action {
-            width: 36px;
-            height: 36px;
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border: none;
-            background: #1e2937;
-            color: #cbd5e1;
-            transition: all 0.2s;
-        }
-
-        .btn-action:hover {
-            transform: scale(1.1);
-        }
-
-        .btn-view:hover {
-            background: #3b82f6;
-            color: white;
-        }
-
-        .btn-vip:hover {
-            background: #eab308;
-            color: #1e2937;
-        }
-
-        .btn-block:hover {
-            background: #ef4444;
-            color: white;
-        }
-
-        /* Empty State */
-        .empty-state {
-            text-align: center;
-            color: #64748b;
-            padding: 40px 20px !important;
-        }
-
-
-        /* Mobil ekranlar uchun */
-        @media (max-width: 480px) {
-            .search-form {
-                flex-direction: column;
-                align-items: stretch;
-            }
-
-            .search-input {
-                max-width: 100%;
-            }
-        }
-    </style>
-    <style>
-        .truncate-text {
-            max-width: 160px;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-            display: inline-block;
-            vertical-align: middle;
+        :root{
+            --bg:#07060f; --bg2:#0e0c1d; --panel:rgba(255,255,255,.045); --panel-b:rgba(255,255,255,.09);
+            --text:#ece9ff; --muted:#8b87ad; --faint:#5b5780;
+            --p1:#8b5cf6; --p2:#22d3ee; --p3:#f472b6; --ok:#34d399; --warn:#fbbf24; --bad:#fb7185; --blue:#60a5fa;
+            --grad:linear-gradient(135deg,#8b5cf6,#22d3ee);
+            --grad2:linear-gradient(135deg,#f472b6,#8b5cf6);
+            --shadow:0 10px 40px rgba(0,0,0,.45);
+            --input:rgba(255,255,255,.06);
+        }
+        [data-theme="light"]{
+            --bg:#f3f1ff; --bg2:#ffffff; --panel:rgba(255,255,255,.75); --panel-b:rgba(90,70,200,.14);
+            --text:#1b1740; --muted:#5f5a8a; --faint:#8f8bb5; --input:rgba(90,70,200,.07);
+            --shadow:0 10px 30px rgba(90,70,200,.15);
+        }
+        *{box-sizing:border-box;margin:0;padding:0}
+        html{scroll-behavior:smooth}
+        body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;transition:background .3s,color .3s}
+        a{color:inherit}
+        /* aurora background */
+        .aurora{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
+        .aurora i{position:absolute;border-radius:50%;filter:blur(110px);opacity:.38;animation:float 18s ease-in-out infinite}
+        .aurora i:nth-child(1){width:520px;height:520px;background:#7c3aed;top:-140px;left:-80px}
+        .aurora i:nth-child(2){width:460px;height:460px;background:#0891b2;bottom:-120px;right:-60px;animation-delay:-6s}
+        .aurora i:nth-child(3){width:340px;height:340px;background:#db2777;top:40%;left:45%;opacity:.2;animation-delay:-11s}
+        [data-theme="light"] .aurora i{opacity:.22}
+        @keyframes float{0%,100%{transform:translate(0,0) scale(1)}33%{transform:translate(60px,40px) scale(1.12)}66%{transform:translate(-40px,60px) scale(.94)}}
+
+        /* sidebar */
+        .sidebar{position:fixed;left:0;top:0;bottom:0;width:240px;z-index:100;padding:22px 14px;display:flex;flex-direction:column;
+            background:var(--bg2);border-right:1px solid var(--panel-b);transition:transform .3s,width .3s}
+        [data-theme="dark"] .sidebar{background:rgba(14,12,29,.75);backdrop-filter:blur(18px)}
+        .sidebar-logo{display:flex;align-items:center;gap:10px;font-weight:800;font-size:18px;padding:0 8px 22px;letter-spacing:-.3px}
+        .logo-mark{width:36px;height:36px;border-radius:11px;background:var(--grad);display:grid;place-items:center;color:#fff;font-size:19px;box-shadow:0 6px 20px #8b5cf655;animation:glow 3s infinite}
+        @keyframes glow{50%{box-shadow:0 6px 30px #22d3ee88}}
+        .sidebar-logo span{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+        .nav-label{font-size:10px;font-weight:700;letter-spacing:1.2px;color:var(--faint);padding:14px 12px 6px;text-transform:uppercase}
+        .nav-item{position:relative;display:flex;align-items:center;gap:11px;padding:11px 13px;border-radius:12px;color:var(--muted);text-decoration:none;font-size:13.5px;font-weight:500;transition:all .25s;margin-bottom:3px}
+        .nav-item i{font-size:18px}
+        .nav-item:hover{background:var(--panel);color:var(--text);transform:translateX(4px)}
+        .nav-item.active{background:linear-gradient(90deg,#8b5cf633,#22d3ee14);color:var(--text)}
+        .nav-item.active::before{content:'';position:absolute;left:-14px;top:20%;bottom:20%;width:4px;border-radius:0 4px 4px 0;background:var(--grad)}
+        .nav-item.active i{color:var(--p2)}
+        .sidebar-foot{margin-top:auto;padding:14px;border-radius:14px;background:var(--panel);border:1px solid var(--panel-b);font-size:12px;color:var(--muted)}
+        .sidebar-foot b{color:var(--text);display:block;font-size:13px;margin-bottom:2px}
+
+        /* topbar */
+        .topbar{position:fixed;top:0;left:240px;right:0;height:62px;z-index:99;display:flex;align-items:center;gap:12px;padding:0 28px;
+            background:rgba(14,12,29,.55);backdrop-filter:blur(16px);border-bottom:1px solid var(--panel-b)}
+        [data-theme="light"] .topbar{background:rgba(255,255,255,.7)}
+        .menu-btn{display:none}
+        .global-search{position:relative;flex:1;max-width:380px}
+        .global-search i{position:absolute;left:13px;top:50%;transform:translateY(-50%);color:var(--faint)}
+        .global-search input{width:100%;padding:10px 54px 10px 38px;border-radius:12px;border:1px solid var(--panel-b);background:var(--input);color:var(--text);font:inherit;font-size:13px;outline:none;transition:.2s}
+        .global-search input:focus{border-color:var(--p1);box-shadow:0 0 0 4px #8b5cf622}
+        .kbd{position:absolute;right:10px;top:50%;transform:translateY(-50%);font:600 10px 'JetBrains Mono',monospace;padding:3px 7px;border-radius:6px;border:1px solid var(--panel-b);color:var(--faint)}
+        .top-right{margin-left:auto;display:flex;align-items:center;gap:10px}
+        .clock{font:500 13px 'JetBrains Mono',monospace;color:var(--muted)}
+        .icon-btn{width:38px;height:38px;border-radius:11px;border:1px solid var(--panel-b);background:var(--panel);color:var(--muted);cursor:pointer;display:grid;place-items:center;font-size:17px;transition:.2s}
+        .icon-btn:hover{color:var(--text);transform:translateY(-2px);border-color:var(--p1)}
+        .topbar-badge{font-size:11px;padding:6px 12px;border-radius:20px;background:#34d39918;color:var(--ok);border:1px solid #34d39933;font-weight:700;display:inline-flex;align-items:center;gap:6px}
+        .topbar-badge::before{content:'';width:7px;height:7px;border-radius:50%;background:var(--ok);animation:pulse 2s infinite}
+        @keyframes pulse{0%,100%{box-shadow:0 0 0 0 #34d39988}50%{box-shadow:0 0 0 6px #34d39900}}
+        .me{display:flex;align-items:center;gap:9px;font-size:12px;color:var(--muted)}
+        .me .av{width:34px;height:34px;border-radius:50%;background:var(--grad2);display:grid;place-items:center;color:#fff;font-weight:700}
+
+        /* main */
+        .main{position:relative;z-index:1;margin-left:240px;padding:92px 30px 50px}
+        .page-head{display:flex;align-items:flex-end;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:24px}
+        .page-head h1{font-size:28px;font-weight:800;letter-spacing:-.6px}
+        .page-head h1 span{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+        .page-head p{color:var(--muted);font-size:13px;margin-top:4px}
+        .breadcrumb{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--faint);margin-bottom:18px;flex-wrap:wrap}
+        .breadcrumb a{color:var(--p2);text-decoration:none}
+        .breadcrumb a:hover{text-decoration:underline}
+
+        /* glass cards */
+        .card{position:relative;background:var(--panel);border:1px solid var(--panel-b);border-radius:20px;padding:22px;margin-bottom:20px;backdrop-filter:blur(14px);box-shadow:var(--shadow);overflow:hidden;transition:transform .3s,border-color .3s}
+        .card::before{content:'';position:absolute;inset:0 0 auto 0;height:1px;background:linear-gradient(90deg,transparent,#8b5cf666,#22d3ee66,transparent)}
+        .card:hover{border-color:#8b5cf655}
+        .card-title{display:flex;align-items:center;gap:9px;font-size:15px;font-weight:700;margin-bottom:18px;flex-wrap:wrap}
+        .card-title i{font-size:19px;color:var(--p2)}
+        .card-title .right{margin-left:auto;font-size:12px;font-weight:500;color:var(--muted);display:flex;gap:8px;align-items:center}
+        .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+        .grid-2>.card{margin-bottom:0}
+        .grid-2.wide{grid-template-columns:1.1fr .9fr}
+        .mb{margin-bottom:20px}
+
+        /* KPI */
+        .stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:16px;margin-bottom:20px}
+        .stat-card{position:relative;padding:20px;border-radius:20px;background:var(--panel);border:1px solid var(--panel-b);backdrop-filter:blur(14px);overflow:hidden;transition:.3s;box-shadow:var(--shadow)}
+        .stat-card:hover{transform:translateY(-6px) scale(1.015);border-color:var(--c,#8b5cf6)}
+        .stat-card::after{content:'';position:absolute;width:130px;height:130px;border-radius:50%;right:-40px;top:-40px;background:var(--c,#8b5cf6);opacity:.14;filter:blur(8px);transition:.4s}
+        .stat-card:hover::after{transform:scale(1.6);opacity:.22}
+        .stat-ico{width:42px;height:42px;border-radius:13px;display:grid;place-items:center;font-size:21px;color:var(--c,#8b5cf6);background:color-mix(in srgb,var(--c,#8b5cf6) 16%,transparent);margin-bottom:14px}
+        .stat-num{font-size:32px;font-weight:800;line-height:1;letter-spacing:-1px;color:var(--text)}
+        .stat-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin-top:8px}
+        .stat-bar{height:4px;border-radius:4px;background:var(--panel-b);margin-top:14px;overflow:hidden}
+        .stat-bar b{display:block;height:100%;width:0;border-radius:4px;background:var(--c,#8b5cf6);transition:width 1.4s cubic-bezier(.2,.8,.2,1)}
+
+        /* bot header */
+        .bot-header{display:flex;align-items:center;gap:16px;margin-bottom:20px;flex-wrap:wrap}
+        .bot-avatar{width:64px;height:64px;border-radius:20px;background:var(--grad);display:grid;place-items:center;color:#fff;font-size:30px;flex-shrink:0;box-shadow:0 10px 30px #8b5cf644;animation:bob 4s ease-in-out infinite}
+        @keyframes bob{50%{transform:translateY(-5px) rotate(-3deg)}}
+        .bot-name-wrap{flex:1;min-width:0}
+        .bot-name{font-size:24px;font-weight:800;letter-spacing:-.5px}
+        .bot-username{color:var(--p2);font-size:14px;font-weight:500;margin-top:3px}
+
+        /* badges */
+        .status-badge{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:20px;font-size:11px;font-weight:700;letter-spacing:.4px;background:var(--panel-b);color:var(--muted);white-space:nowrap}
+        .badge-active{background:#34d39918;color:var(--ok);border:1px solid #34d39933}
+        .badge-active::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--ok);animation:pulse 2s infinite}
+        .badge-off{background:#fb718518;color:var(--bad);border:1px solid #fb718533}
+        .badge-off::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--bad)}
+        .badge-pause{background:#fbbf2418;color:var(--warn);border:1px solid #fbbf2433}
+        .badge-pause::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--warn)}
+        .badge-blocked{background:#fb718520;color:var(--bad)}
+        .badge-vip{background:linear-gradient(90deg,#fbbf2422,#f472b622);color:var(--warn);border:1px solid #fbbf2433;animation:shine 3s infinite}
+        @keyframes shine{50%{box-shadow:0 0 16px #fbbf2455}}
+
+        /* info grid */
+        .info-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px}
+        .info-item{background:var(--input);border:1px solid var(--panel-b);border-radius:14px;padding:14px 16px;transition:.25s}
+        .info-item:hover{border-color:var(--p1);transform:translateY(-3px)}
+        .info-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--faint);margin-bottom:6px}
+        .info-value{font-size:14px;font-weight:600}
+
+        /* buttons */
+        .btn-group{display:flex;flex-wrap:wrap;gap:10px}
+        .btn{position:relative;overflow:hidden;display:inline-flex;align-items:center;gap:8px;padding:10px 18px;border-radius:12px;font:600 13px 'Inter',sans-serif;cursor:pointer;text-decoration:none;border:none;color:#fff;transition:transform .2s,box-shadow .2s}
+        .btn i{font-size:16px}
+        .btn:hover{transform:translateY(-3px)}
+        .btn:active{transform:translateY(0) scale(.97)}
+        .btn-primary{background:var(--grad);box-shadow:0 6px 20px #8b5cf645}
+        .btn-primary:hover{box-shadow:0 10px 28px #22d3ee55}
+        .btn-danger{background:linear-gradient(135deg,#f43f5e,#be123c);box-shadow:0 6px 20px #f43f5e40}
+        .btn-success{background:linear-gradient(135deg,#10b981,#059669);box-shadow:0 6px 20px #10b98140}
+        .btn-warning{background:linear-gradient(135deg,#f59e0b,#d97706);box-shadow:0 6px 20px #f59e0b40}
+        .btn-ghost{background:var(--panel);color:var(--text);border:1px solid var(--panel-b)}
+        .btn-ghost:hover{border-color:var(--p1)}
+        .btn-sm{padding:7px 12px;font-size:12px;border-radius:10px}
+        .ripple{position:absolute;border-radius:50%;background:rgba(255,255,255,.45);transform:scale(0);animation:rip .6s linear;pointer-events:none}
+        @keyframes rip{to{transform:scale(4);opacity:0}}
+
+        /* tools */
+        .tools{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:16px}
+        .tool-input{flex:1;min-width:200px;max-width:340px;position:relative}
+        .tool-input i{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--faint)}
+        .tool-input input,.form-input,select.tool-select{width:100%;padding:10px 13px 10px 36px;border-radius:12px;border:1px solid var(--panel-b);background:var(--input);color:var(--text);font:inherit;font-size:13px;outline:none;transition:.2s}
+        .form-input{padding-left:13px}
+        select.tool-select{width:auto;padding:10px 14px;cursor:pointer}
+        select.tool-select option{background:#16132b;color:#fff}
+        .tool-input input:focus,.form-input:focus,select.tool-select:focus{border-color:var(--p1);box-shadow:0 0 0 4px #8b5cf622}
+        .chips{display:flex;gap:7px;flex-wrap:wrap}
+        .chip{padding:7px 14px;border-radius:20px;font-size:12px;font-weight:600;border:1px solid var(--panel-b);background:var(--panel);color:var(--muted);cursor:pointer;transition:.2s}
+        .chip:hover{color:var(--text);transform:translateY(-2px)}
+        .chip.on{background:var(--grad);color:#fff;border-color:transparent;box-shadow:0 4px 16px #8b5cf640}
+
+        /* table */
+        .table-wrap{overflow-x:auto;border-radius:16px;border:1px solid var(--panel-b)}
+        table{width:100%;border-collapse:collapse}
+        thead th{background:var(--input);padding:13px 16px;text-align:left;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--faint);white-space:nowrap;user-select:none}
+        thead th.sortable{cursor:pointer}
+        thead th.sortable:hover{color:var(--p2)}
+        thead th.sortable::after{content:' ↕';opacity:.4}
+        thead th.asc::after{content:' ↑';opacity:1;color:var(--p2)}
+        thead th.desc::after{content:' ↓';opacity:1;color:var(--p2)}
+        tbody tr{transition:background .2s,transform .2s;animation:rowin .5s both}
+        tbody tr:nth-child(1){animation-delay:.03s}tbody tr:nth-child(2){animation-delay:.06s}tbody tr:nth-child(3){animation-delay:.09s}tbody tr:nth-child(4){animation-delay:.12s}tbody tr:nth-child(5){animation-delay:.15s}tbody tr:nth-child(n+6){animation-delay:.18s}
+        @keyframes rowin{from{opacity:0;transform:translateY(10px)}}
+        tbody tr:hover{background:linear-gradient(90deg,#8b5cf61a,transparent)}
+        tbody td{padding:13px 16px;border-bottom:1px solid var(--panel-b);font-size:13px;vertical-align:middle}
+        tbody tr:last-child td{border-bottom:none}
+        .clickable-row{cursor:pointer}
+        .row-id{font:500 12px 'JetBrains Mono',monospace;color:var(--faint)}
+        .mono-badge{font:500 12px 'JetBrains Mono',monospace;background:var(--input);color:var(--p2);padding:4px 9px;border-radius:8px;cursor:copy}
+        .row-blocked{opacity:.5}
+        .hidden-row{display:none!important}
+        .user-cell{display:flex;align-items:center;gap:11px}
+        .user-mini-avatar{width:38px;height:38px;border-radius:50%;background:var(--grad2);color:#fff;display:grid;place-items:center;font-weight:700;font-size:15px;flex-shrink:0;text-transform:uppercase}
+        .user-full-name{font-weight:600;max-width:170px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+        .user-username-small{font-size:12px;color:var(--p2);max-width:170px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+        .muted{color:var(--faint);font-style:italic}
+        .view-link{display:inline-flex;align-items:center;gap:5px;padding:7px 13px;border-radius:10px;font-size:12px;font-weight:600;text-decoration:none;color:var(--p2);background:#22d3ee14;border:1px solid #22d3ee2e;transition:.2s;white-space:nowrap}
+        .view-link:hover{background:var(--grad);color:#fff;transform:translateY(-2px)}
+        .actions-cell{text-align:center}
+        .action-buttons{display:flex;gap:6px;justify-content:center}
+        .btn-action{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;border:1px solid var(--panel-b);background:var(--input);color:var(--muted);cursor:pointer;text-decoration:none;transition:.2s;font-size:15px}
+        .btn-action:hover{transform:translateY(-3px) scale(1.08);color:#fff}
+        .btn-view:hover{background:var(--p1)}.btn-vip:hover{background:var(--warn);color:#2a1d00}.btn-block:hover{background:var(--bad)}
+        .empty-state{text-align:center;color:var(--muted);padding:44px 20px!important;cursor:default}
+        .empty-state i{font-size:38px;display:block;margin-bottom:10px;opacity:.6}
+        .no-result{display:none;text-align:center;padding:30px;color:var(--muted);font-size:13px}
+
+        /* rating */
+        .stars{display:inline-flex;gap:2px;color:var(--warn);font-size:14px}
+        .stars i.off{color:var(--panel-b)}
+        .board{display:flex;flex-direction:column;gap:12px}
+        .rank{display:flex;align-items:center;gap:14px;padding:13px 15px;border-radius:16px;background:var(--input);border:1px solid var(--panel-b);transition:.25s;animation:rowin .6s both;cursor:pointer;text-decoration:none}
+        .rank:hover{transform:translateX(6px);border-color:var(--p1)}
+        .medal{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;font-weight:800;font-size:15px;color:#fff;background:var(--faint);flex-shrink:0}
+        .rank:nth-child(1) .medal{background:linear-gradient(135deg,#fde047,#f59e0b);box-shadow:0 0 18px #fbbf2466;color:#4a3000}
+        .rank:nth-child(2) .medal{background:linear-gradient(135deg,#e5e7eb,#9ca3af);color:#222}
+        .rank:nth-child(3) .medal{background:linear-gradient(135deg,#fdba74,#c2410c)}
+        .rank-info{flex:1;min-width:0}
+        .rank-name{font-weight:700;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+        .rank-meta{display:flex;align-items:center;gap:8px;margin-top:4px;font-size:11px;color:var(--muted)}
+        .rank-bar{height:5px;border-radius:5px;background:var(--panel-b);margin-top:8px;overflow:hidden}
+        .rank-bar b{display:block;height:100%;width:0;border-radius:5px;background:var(--grad);transition:width 1.4s cubic-bezier(.2,.8,.2,1)}
+        .rank-score{font-size:20px;font-weight:800;text-align:right;line-height:1}
+        .rank-score small{display:block;font-size:10px;color:var(--faint);font-weight:600;margin-top:3px;text-transform:uppercase}
+
+        /* donut */
+        .donut-wrap{display:flex;align-items:center;gap:26px;flex-wrap:wrap;justify-content:center}
+        .donut{position:relative;width:190px;height:190px;flex-shrink:0}
+        .donut svg{transform:rotate(-90deg);width:100%;height:100%}
+        .donut circle{fill:none;stroke-width:22;transition:stroke-dasharray 1.4s cubic-bezier(.2,.8,.2,1),stroke-width .2s;cursor:pointer}
+        .donut circle:hover{stroke-width:27}
+        .donut-center{position:absolute;inset:0;display:grid;place-content:center;text-align:center}
+        .donut-center b{font-size:32px;font-weight:800;line-height:1}
+        .donut-center span{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-top:4px}
+        .legend{display:flex;flex-direction:column;gap:9px;flex:1;min-width:170px}
+        .leg{display:flex;align-items:center;gap:10px;font-size:13px;padding:8px 12px;border-radius:12px;background:var(--input);border:1px solid transparent;transition:.2s;cursor:default}
+        .leg:hover{border-color:var(--c);transform:translateX(4px)}
+        .leg i{width:11px;height:11px;border-radius:4px;background:var(--c)}
+        .leg em{margin-left:auto;font-style:normal;font-weight:700}
+        .leg small{color:var(--faint);margin-left:6px}
+
+        /* insights */
+        .insights{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+        .insight{padding:15px;border-radius:16px;background:var(--input);border:1px solid var(--panel-b);display:flex;gap:12px;align-items:center;transition:.25s}
+        .insight:hover{transform:translateY(-3px);border-color:var(--p2)}
+        .insight .ico{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;font-size:20px;background:var(--grad);color:#fff;flex-shrink:0}
+        .insight b{display:block;font-size:17px;font-weight:800}
+        .insight span{font-size:11px;color:var(--muted)}
+
+        /* ring */
+        .ring-wrap{display:flex;align-items:center;gap:20px;flex-wrap:wrap}
+        .ring{position:relative;width:120px;height:120px}
+        .ring svg{transform:rotate(-90deg)}
+        .ring circle{fill:none;stroke-width:11;stroke-linecap:round}
+        .ring .bg{stroke:var(--panel-b)}
+        .ring .fg{stroke:url(#rg);stroke-dasharray:0 999;transition:stroke-dasharray 1.6s cubic-bezier(.2,.8,.2,1)}
+        .ring-c{position:absolute;inset:0;display:grid;place-content:center;text-align:center;font-weight:800;font-size:24px}
+        .ring-c small{font-size:10px;font-weight:600;color:var(--muted)}
+
+        /* token */
+        .token-box{background:var(--input);border:1px dashed var(--panel-b);border-radius:14px;padding:16px 18px;margin-bottom:14px;font:500 14px 'JetBrains Mono',monospace;word-break:break-all;min-height:54px;display:flex;align-items:center}
+        .token-masked{color:var(--muted);letter-spacing:1px}
+        .token-full{color:var(--ok)}
+        .token-empty{color:var(--faint);font-style:italic}
+        .token-hint{margin-left:auto;font-size:11px;color:var(--faint);font-weight:400}
+
+        /* form */
+        .form-group{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+        .form-label{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--faint)}
+        .mono-input{font-family:'JetBrains Mono',monospace}
+        .inline-form{display:flex;gap:6px;align-items:center;flex-wrap:nowrap}
+        .inline-form select,.inline-form input{padding:7px 10px;border-radius:9px;border:1px solid var(--panel-b);background:var(--input);color:var(--text);font-size:12px;outline:none}
+        .inline-form select option{background:#16132b}
+        .inline-form input{width:100px}
+        .inline-form button{background:#34d39922;color:var(--ok);border:none;cursor:pointer;padding:8px 11px;border-radius:9px;transition:.2s}
+        .inline-form button:hover{background:var(--ok);color:#fff}
+
+        /* pagination */
+        .pagination{display:flex;align-items:center;justify-content:center;gap:10px;padding-top:18px;flex-wrap:wrap}
+        .page-btn{padding:8px 15px;background:var(--input);color:var(--p2);border:1px solid var(--panel-b);border-radius:10px;text-decoration:none;font-size:13px;font-weight:600;transition:.2s}
+        .page-btn:hover{background:var(--grad);color:#fff;transform:translateY(-2px)}
+        .page-info{color:var(--muted);font-size:13px}
+
+        /* toast + misc */
+        #toast{position:fixed;bottom:26px;right:26px;z-index:9999;display:flex;align-items:center;gap:10px;background:var(--bg2);border:1px solid var(--p1);color:var(--text);padding:13px 20px;border-radius:14px;font-size:13px;font-weight:600;box-shadow:0 14px 40px #8b5cf655;opacity:0;transform:translateY(14px) scale(.96);transition:.35s;pointer-events:none}
+        #toast.show{opacity:1;transform:none}
+        #toast i{color:var(--ok);font-size:18px}
+        .reveal{opacity:0;transform:translateY(26px);transition:opacity .7s,transform .7s}
+        .reveal.in{opacity:1;transform:none}
+        .tag-type{padding:4px 10px;border-radius:8px;font-size:11px;font-weight:700;background:#8b5cf620;color:#c4b5fd}
+        ::-webkit-scrollbar{height:8px;width:8px}::-webkit-scrollbar-thumb{background:var(--panel-b);border-radius:8px}
+        details>summary::-webkit-details-marker{display:none}
+        details[open]>summary .ti-chevron-down{transform:rotate(180deg)}
+        @media(max-width:1000px){.grid-2,.grid-2.wide{grid-template-columns:1fr}}
+        @media(max-width:860px){
+            .sidebar{transform:translateX(-100%)}.sidebar.open{transform:none}
+            .topbar{left:0;padding:0 14px}.main{margin-left:0;padding:84px 14px 40px}
+            .menu-btn{display:grid}.clock,.me span{display:none}.kbd{display:none}
         }
     </style>
 </head>
 <body>
+<div class="aurora"><i></i><i></i><i></i></div>
 
-<!-- SIDEBAR -->
-<aside class="sidebar">
-    <div class="sidebar-logo">Admin<span>Panel</span></div>
-    <nav class="sidebar-nav">
-        <a href="/" class="nav-item"><i class="ti ti-layout-dashboard"></i> Dashboard</a>
-        <a href="/admin/bots" class="nav-item {{if .Bot}}active{{end}}"><i class="ti ti-robot"></i> Botlar</a>
-
-        <a href="/admin/all-users" class="nav-item {{if .IsAllUsersPage}}active{{end}}">
-            <i class="ti ti-users"></i> Barcha Obunachilar
-        </a>
-
-        <a href="/admin/users" class="nav-item {{if .IsAllAdminsPage}}active{{end}}"><i class="ti ti-user-check"></i>
-            Adminlar</a>
-        <a href="/admin/token" class="nav-item"><i class="ti ti-settings"></i> Sozlamalar</a>
-    </nav>
+<aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo"><div class="logo-mark"><i class="ti ti-bolt"></i></div>Admin<span>Panel</span></div>
+    <div class="nav-label">Asosiy</div>
+    <a href="/" class="nav-item {{if not .Bot}}{{if not .IsBotUserDetailPage}}{{if not .IsAllAdminsPage}}{{if not .IsAllUsersPage}}active{{end}}{{end}}{{end}}{{end}}"><i class="ti ti-layout-dashboard"></i> Dashboard</a>
+    <div class="nav-label">Foydalanuvchilar</div>
+    <a href="/admin/all-users" class="nav-item {{if .IsAllUsersPage}}active{{end}}"><i class="ti ti-users"></i> Barcha Obunachilar</a>
+    <a href="/admin/users" class="nav-item {{if .IsAllAdminsPage}}active{{end}}"><i class="ti ti-user-check"></i> Adminlar</a>
+    <div class="nav-label">Tizim</div>
+    <a href="/admin/token" class="nav-item"><i class="ti ti-settings"></i> Sozlamalar</a>
+    <div class="sidebar-foot"><b>AdminPanel v2</b>Tez qidiruv: <span class="kbd" style="position:static;transform:none;display:inline-block">/</span></div>
 </aside>
 
-<!-- TOPBAR -->
 <div class="topbar">
-    <span style="font-size:12px;color:#475569">admin@panel.uz</span>
-    <span class="topbar-badge"><i class="ti ti-circle-check"
-                                  style="font-size:12px;vertical-align:-1px"></i> Online</span>
+    <button class="icon-btn menu-btn" onclick="document.getElementById('sidebar').classList.toggle('open')"><i class="ti ti-menu-2"></i></button>
+    <div class="global-search">
+        <i class="ti ti-search"></i>
+        <input id="pageSearch" type="text" placeholder="Sahifadagi jadvaldan qidirish...">
+        <span class="kbd">/</span>
+    </div>
+    <div class="top-right">
+        <span class="clock" id="clock"></span>
+        <button class="icon-btn" id="themeBtn" title="Mavzu"><i class="ti ti-moon"></i></button>
+        <span class="topbar-badge">Online</span>
+        <div class="me"><div class="av">A</div><span>admin@panel.uz</span></div>
+    </div>
 </div>
 
-<!-- MAIN -->
 <main class="main">
 
     {{if .Bot}}
-
+        <!-- ================= BOT DETAIL ================= -->
         <div class="breadcrumb">
-            <a href="/"><i class="ti ti-layout-dashboard"></i> Dashboard</a>
-            <i class="ti ti-chevron-right"></i>
-            <a href="/admin/bots">Botlar</a>
-            <i class="ti ti-chevron-right"></i>
-            <span style="color:#94a3b8">{{.Bot.BotName}}</span>
+            <a href="/"><i class="ti ti-layout-dashboard"></i> Dashboard</a><i class="ti ti-chevron-right"></i>
+            <a href="/admin/bots">Botlar</a><i class="ti ti-chevron-right"></i>
+            <span>{{.Bot.BotName}}</span>
         </div>
 
-        <div class="bot-header">
-            <div class="bot-name-wrap">
-                <div class="bot-name">{{.Bot.BotName}}</div>
-                <div class="bot-username">{{.Bot.BotUsername}}</div>
-            </div>
-            {{if .Bot.IsActive}}
-                <span class="status-badge badge-active">ACTIVE</span>
-            {{else}}
-                <span class="status-badge badge-off">OFF</span>
-            {{end}}
-        </div>
-        <div class="stats-row">
-            <div class="stat-card">
-                <div class="stat-num" style="color:#3b82f6">{{.RealUserCount}}</div>
-                <div class="stat-label">Jami BotUser</div>
-            </div>
-            <div class="stat-card">
-                {{if .Bot.IsActive}}
-                    <div class="stat-num" style="color:#22c55e">ON</div>
-                {{else}}
-                    <div class="stat-num" style="color:#ef4444">OFF</div>
-                {{end}}
-                <div class="stat-label">Status</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-num" style="color:#a855f7;font-size:16px;padding-top:7px">{{.Bot.BotType.Name}}</div>
-                <div class="stat-label">Bot Turi</div>
+        <div class="card reveal">
+            <div class="bot-header" style="margin-bottom:0">
+                <div class="bot-avatar"><i class="ti ti-robot"></i></div>
+                <div class="bot-name-wrap">
+                    <div class="bot-name">{{.Bot.BotName}}</div>
+                    <div class="bot-username">{{.Bot.BotUsername}}</div>
+                </div>
+                {{if .Bot.IsActive}}<span class="status-badge badge-active">OCHIQ · ISHLAYAPTI</span>{{else}}<span class="status-badge badge-pause">OCHIQ · VAQTINCHA TO'XTATILGAN</span>{{end}}
             </div>
         </div>
 
-        <div class="stats-row">
-            <div class="stat-card">
-                <div class="stat-num" style="color:#f97316">{{.ContentCount}}</div>
-                <div class="stat-label">{{if eq .Bot.BotType.Code "anime"}}Jami Anime{{else}}Jami Kino{{end}}</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-num" style="color:#06b6d4">{{.VideoCount}}</div>
-                <div class="stat-label">Jami Video</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-num" style="color:#eab308">{{.AdminCount}}</div>
-                <div class="stat-label">Jami Admin</div>
-            </div>
+        <div class="stats-row reveal">
+            <div class="stat-card" style="--c:#60a5fa"><div class="stat-ico"><i class="ti ti-users"></i></div><div class="stat-num count">{{.RealUserCount}}</div><div class="stat-label">Jami BotUser</div></div>
+            <div class="stat-card" style="--c:{{if .Bot.IsActive}}#34d399{{else}}#fbbf24{{end}}"><div class="stat-ico"><i class="ti ti-power"></i></div><div class="stat-num" style="font-size:24px;padding:4px 0">OCHIQ</div><div class="stat-label">{{if .Bot.IsActive}}Ishlayapti{{else}}Vaqtincha to'xtatilgan{{end}}</div></div>
+            <div class="stat-card" style="--c:#a78bfa"><div class="stat-ico"><i class="ti ti-category"></i></div><div class="stat-num" style="font-size:20px;padding:6px 0">{{.Bot.BotType.Name}}</div><div class="stat-label">Bot Turi</div></div>
+            <div class="stat-card" style="--c:#fb923c"><div class="stat-ico"><i class="ti ti-movie"></i></div><div class="stat-num count">{{.ContentCount}}</div><div class="stat-label">{{if eq .Bot.BotType.Code "anime"}}Jami Anime{{else}}Jami Kino{{end}}</div></div>
+            <div class="stat-card" style="--c:#22d3ee"><div class="stat-ico"><i class="ti ti-video"></i></div><div class="stat-num count">{{.VideoCount}}</div><div class="stat-label">Jami Video</div></div>
+            <div class="stat-card" style="--c:#fbbf24"><div class="stat-ico"><i class="ti ti-shield-check"></i></div><div class="stat-num count">{{.AdminCount}}</div><div class="stat-label">Jami Admin</div></div>
         </div>
 
-        <div class="card">
-            <div class="card-title">
-                <i class="ti ti-lock"></i> Bot Token
-                <span class="token-hint">CreatedBot.Token</span>
+        <div class="grid-2 mb reveal">
+            <div class="card">
+                <div class="card-title"><i class="ti ti-lock"></i> Bot Token <span class="token-hint">CreatedBot.Token</span></div>
+                <div class="token-box">
+                    {{if .Bot.Token}}
+                        <span id="tokenMask" class="token-masked">{{if gt (len .Bot.Token) 12}}{{slice .Bot.Token 0 12}}{{end}}••••••••••••••••••••••</span>
+                        <span id="tokenFull" class="token-full" style="display:none;">{{.Bot.Token}}</span>
+                    {{else}}<span class="token-empty">Token mavjud emas</span>{{end}}
+                </div>
+                <div class="btn-group">
+                    <button class="btn btn-ghost" onclick="toggleToken(this)"><i class="ti ti-eye"></i> <span>Ko'rish</span></button>
+                    <button class="btn btn-ghost" onclick="copyToken()"><i class="ti ti-copy"></i> Nusxalash</button>
+                    <a href="/admin/bots/{{.Bot.Id}}/regenerate-token" class="btn btn-warning" onclick="return confirm('Tokenni yangilash? Eski token butunlay ishlamay qoladi!')"><i class="ti ti-refresh"></i> Yangilash</a>
+                </div>
             </div>
 
-            <div class="token-box">
-                {{if .Bot.Token}}
-                    <span id="tokenMask" class="token-masked">{{slice .Bot.Token 0 12}}••••••••••••••••••••••</span>
-                    <span id="tokenFull" class="token-full" style="display:none;">{{.Bot.Token}}</span>
-                {{else}}
-                    <span class="token-empty">Token mavjud emas</span>
-                {{end}}
-            </div>
-
-            <div class="btn-group">
-                <button class="btn btn-ghost" onclick="toggleToken(this)">
-                    <i class="ti ti-eye"></i> <span>Ko'rish</span>
-                </button>
-                <button class="btn btn-ghost" onclick="copyToken()">
-                    <i class="ti ti-copy"></i> Nusxalash
-                </button>
-                <a href="/admin/bots/{{.Bot.Id}}/regenerate-token" class="btn btn-warning"
-                   onclick="return confirm('Tokenni yangilash? Eski token butunlay ishlamay qoladi!')">
-                    <i class="ti ti-refresh"></i> Yangilash
-                </a>
-            </div>
-        </div>
-
-        <div class="card">
-            <div class="card-title"><i class="ti ti-settings"></i> Boshqaruv</div>
-            <div class="btn-group">
-                {{if .Bot.IsActive}}
-                    <a href="/admin/bots/{{.Bot.Id}}/toggle" class="btn btn-warning"
-                       onclick="return confirm('Botni o\'chirasizmi?')">
-                        <i class="ti ti-player-pause"></i> Botni o'chirish
-                    </a>
-                {{else}}
-                    <a href="/admin/bots/{{.Bot.Id}}/toggle" class="btn btn-success">
-                        <i class="ti ti-player-play"></i> Botni yoqish
-                    </a>
-                {{end}}
-
-                <a href="/admin/bots/{{.Bot.Id}}/edit" class="btn btn-primary">
-                    <i class="ti ti-edit"></i> Tahrirlash
-                </a>
-
-                <a href="/admin/bots/{{.Bot.Id}}/delete" class="btn btn-danger"
-                   onclick="return confirm('DIQQAT! CreatedBot va barcha BotUser\'lar o\'chib ketadi!')">
-                    <i class="ti ti-trash"></i> O'chirish
-                </a>
-
-                <a href="/admin/bots" class="btn btn-ghost"><i class="ti ti-arrow-left"></i> Orqaga</a>
+            <div class="card">
+                <div class="card-title"><i class="ti ti-settings"></i> Boshqaruv</div>
+                <div class="btn-group">
+                    {{if .Bot.IsActive}}
+                        <a href="/admin/bots/{{.Bot.Id}}/toggle" class="btn btn-warning" onclick="return confirm('Botni vaqtincha to\'xtatasizmi? Bot ochiq qoladi, keyin qayta yoqish mumkin.')"><i class="ti ti-player-pause"></i> Vaqtincha to'xtatish</a>
+                    {{else}}
+                        <a href="/admin/bots/{{.Bot.Id}}/toggle" class="btn btn-success"><i class="ti ti-player-play"></i> Botni yoqish</a>
+                    {{end}}
+                    <a href="/admin/bots/{{.Bot.Id}}/edit" class="btn btn-primary"><i class="ti ti-edit"></i> Tahrirlash</a>
+                    <a href="/admin/bots/{{.Bot.Id}}/delete" class="btn btn-danger" onclick="return confirm('DIQQAT! CreatedBot va barcha BotUser\'lar o\'chib ketadi!')"><i class="ti ti-trash"></i> O'chirish</a>
+                    <a href="/admin/bots" class="btn btn-ghost"><i class="ti ti-arrow-left"></i> Orqaga</a>
+                </div>
             </div>
         </div>
 
         {{if .IsEditing}}
-            <div class="card" style="border-color:#3b82f640">
+            <div class="card" style="border-color:#8b5cf666">
                 <div class="card-title"><i class="ti ti-edit"></i> Bot Ma'lumotlarini Tahrirlash</div>
                 <form action="/admin/bots/{{.Bot.Id}}/edit" method="POST">
-                    <div class="form-group">
-                        <label class="form-label">Bot Nomi — CreatedBot.BotName</label>
-                        <input type="text" name="bot_name" class="form-input" value="{{.Bot.BotName}}" required>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Bot Username — CreatedBot.BotUsername</label>
-                        <input type="text" name="bot_username" class="form-input" value="{{.Bot.BotUsername}}" required>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Bot Token — CreatedBot.Token</label>
-                        <input type="text" name="token" class="form-input mono-input" value="{{.Bot.Token}}" required>
-                    </div>
-                    <div class="btn-group" style="justify-content:flex-end;margin-top:4px">
+                    <div class="form-group"><label class="form-label">Bot Nomi — CreatedBot.BotName</label><input type="text" name="bot_name" class="form-input" value="{{.Bot.BotName}}" required></div>
+                    <div class="form-group"><label class="form-label">Bot Username — CreatedBot.BotUsername</label><input type="text" name="bot_username" class="form-input" value="{{.Bot.BotUsername}}" required></div>
+                    <div class="form-group"><label class="form-label">Bot Token — CreatedBot.Token</label><input type="text" name="token" class="form-input mono-input" value="{{.Bot.Token}}" required></div>
+                    <div class="btn-group" style="justify-content:flex-end">
                         <a href="/admin/bots/{{.Bot.Id}}" class="btn btn-ghost"><i class="ti ti-x"></i> Bekor qilish</a>
                         <button type="submit" class="btn btn-primary"><i class="ti ti-device-floppy"></i> Saqlash</button>
                     </div>
@@ -991,652 +400,356 @@
             </div>
         {{end}}
 
-        <div class="card">
-            <div class="card-title">
-                <i class="ti ti-users"></i> Bot Foydalanuvchilari (BotUser)
-                <span style="margin-left:auto;font-size:11px;color:#475569;font-weight:400">{{.RealUserCount}} ta</span>
+        <div class="card reveal">
+            <div class="card-title"><i class="ti ti-users"></i> Bot Foydalanuvchilari (BotUser)
+                <span class="right">{{.RealUserCount}} ta
+        <button class="btn btn-ghost btn-sm" onclick="exportCSV('usersTable','bot-users.csv')"><i class="ti ti-download"></i> CSV</button></span>
             </div>
-
+            <div class="tools">
+                <div class="tool-input"><i class="ti ti-search"></i><input type="text" data-search="usersTable" placeholder="Ism, username yoki TgId..."></div>
+                <div class="chips" data-filter="usersTable">
+                    <span class="chip on" data-v="">Hammasi</span><span class="chip" data-v="vip">👑 VIP</span><span class="chip" data-v="blocked">🚫 Blok</span>
+                </div>
+            </div>
             <div class="table-wrap">
-                <table class="users-table">
-                    <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Foydalanuvchi</th>
-                        <th>TgId</th>
-                        <th>Qo'shilgan</th>
-                        <th>Amallar</th>
-                    </tr>
-                    </thead>
+                <table class="users-table" id="usersTable">
+                    <thead><tr><th class="sortable">ID</th><th class="sortable">Foydalanuvchi</th><th>TgId</th><th class="sortable">Qo'shilgan</th><th>Amallar</th></tr></thead>
                     <tbody>
                     {{range .Users}}
-                        <tr onclick="window.location='/admin/bot-users/{{.Id}}'" class="clickable-row">
+                        <tr onclick="window.location='/admin/bot-users/{{.Id}}'" class="clickable-row {{if .IsBlocked}}row-blocked{{end}}" data-status="{{if .IsBlocked}}blocked{{else if .IsVip}}vip{{else}}normal{{end}}">
                             <td class="row-id">#{{.Id}}</td>
-
-                            <td>
-                                <div class="user-cell">
-                                    <div class="user-mini-avatar">
-                                        {{if .FirstName}}{{slice .FirstName 0 1}}{{else}}<i class="ti ti-user"></i>{{end}}
-                                    </div>
-                                    <div>
-                                        <div class="user-full-name">{{.FirstName}} {{.LastName}}</div>
-                                        <div class="user-username-small">@{{.Username}}</div>
-                                    </div>
-                                </div>
-                            </td>
-
-                            <td><span class="mono-badge">{{.TgId}}</span></td>
-
-                            <td style="font-size:11px;color:#64748b">
-                                {{.JoinedAt.Format "02 Jan 2006, 15:04"}}
-                            </td>
-
+                            <td><div class="user-cell">
+                                    <div class="user-mini-avatar" data-initial="{{.FirstName}}{{.Username}}"><i class="ti ti-user"></i></div>
+                                    <div><div class="user-full-name">{{.FirstName}} {{.LastName}}</div><div class="user-username-small">@{{.Username}}</div></div>
+                                </div></td>
+                            <td><span class="mono-badge" data-copy="{{.TgId}}">{{.TgId}}</span></td>
+                            <td style="font-size:12px;color:var(--muted)">{{.JoinedAt.Format "02 Jan 2006, 15:04"}}</td>
                             <td class="actions-cell" onclick="event.stopPropagation()">
                                 <div class="action-buttons">
-                                    <a href="/admin/bot-users/{{.Id}}" class="btn-action btn-view" title="Ko'rish">
-                                        <i class="ti ti-eye"></i>
-                                    </a>
-                                    <button onclick="makeVip({{.Id}})" class="btn-action btn-vip" title="VIP qilish">
-                                        <i class="ti ti-crown"></i>
-                                    </button>
-                                    <button onclick="blockUser({{.Id}})" class="btn-action btn-block" title="Bloklash">
-                                        <i class="ti ti-ban"></i>
-                                    </button>
+                                    <a href="/admin/bot-users/{{.Id}}" class="btn-action btn-view" title="Ko'rish"><i class="ti ti-eye"></i></a>
+                                    <button onclick="makeVip({{.Id}})" class="btn-action btn-vip" title="VIP qilish"><i class="ti ti-crown"></i></button>
+                                    <button onclick="blockUser({{.Id}})" class="btn-action btn-block" title="Bloklash"><i class="ti ti-ban"></i></button>
                                 </div>
                             </td>
                         </tr>
                     {{else}}
-                        <tr>
-                            <td colspan="5" class="empty-state">
-                                <i class="ti ti-users-off" style="font-size:32px;display:block;margin-bottom:12px"></i>
-                                <p>Hali foydalanuvchi yo'q</p>
-                            </td>
-                        </tr>
+                        <tr><td colspan="5" class="empty-state"><i class="ti ti-users-off"></i><p>Hali foydalanuvchi yo'q</p></td></tr>
                     {{end}}
                     </tbody>
                 </table>
             </div>
+            <div class="no-result">Hech narsa topilmadi 🔍</div>
         </div>
 
     {{else if .IsBotUserDetailPage}}
-
+        <!-- ================= BOT USER DETAIL ================= -->
         <div class="breadcrumb">
-            <a href="/"><i class="ti ti-layout-dashboard"></i> Dashboard</a>
-            <i class="ti ti-chevron-right"></i>
-            {{if .BotUser.Bot}}
-                <a href="/admin/bots/{{.BotUser.Bot.Id}}">{{.BotUser.Bot.BotName}}</a>
-                <i class="ti ti-chevron-right"></i>
-            {{end}}
-            <span style="color:#94a3b8">
-                {{if or .BotUser.FirstName .BotUser.LastName}}{{.BotUser.FirstName}} {{.BotUser.LastName}}{{else}}Foydalanuvchi{{end}}
-            </span>
+            <a href="/"><i class="ti ti-layout-dashboard"></i> Dashboard</a><i class="ti ti-chevron-right"></i>
+            {{if .BotUser.Bot}}<a href="/admin/bots/{{.BotUser.Bot.Id}}">{{.BotUser.Bot.BotName}}</a><i class="ti ti-chevron-right"></i>{{end}}
+            <span>{{if or .BotUser.FirstName .BotUser.LastName}}{{.BotUser.FirstName}} {{.BotUser.LastName}}{{else}}Foydalanuvchi{{end}}</span>
         </div>
 
-        <div class="card">
+        <div class="card reveal">
             <div class="bot-header">
-                <div class="bot-header">
-
-                    <div class="bot-name-wrap">
-                        <div class="bot-name">
-                            {{if or .BotUser.FirstName .BotUser.LastName}}
-                                {{.BotUser.FirstName}} {{.BotUser.LastName}}
-                            {{else}}
-                                <span style="color:#64748b;font-style:italic">Ismsiz foydalanuvchi</span>
-                            {{end}}
-                        </div>
-                        <div class="bot-username">
-                            {{if .BotUser.Username}}@{{.BotUser.Username}}{{else}}username yo'q{{end}}
-                        </div>
-                    </div>
-
-                    {{if .BotUser.IsBlocked}}
-                        <span class="status-badge badge-blocked">BLOCKED</span>
-                    {{else if .BotUser.IsVip}}
-                        <span class="status-badge badge-vip">VIP</span>
-                    {{else}}
-                        <span class="status-badge">Oddiy</span>
-                    {{end}}
+                <div class="bot-avatar" style="border-radius:50%;background:var(--grad2);font-size:26px;font-weight:800" data-initial="{{.BotUser.FirstName}}{{.BotUser.Username}}"><i class="ti ti-user"></i></div>
+                <div class="bot-name-wrap">
+                    <div class="bot-name">{{if or .BotUser.FirstName .BotUser.LastName}}{{.BotUser.FirstName}} {{.BotUser.LastName}}{{else}}<span class="muted">Ismsiz foydalanuvchi</span>{{end}}</div>
+                    <div class="bot-username">{{if .BotUser.Username}}@{{.BotUser.Username}}{{else}}username yo'q{{end}}</div>
                 </div>
-
-                {{if .BotUser.IsBlocked}}
-                    <span class="status-badge badge-blocked">🚫 BLOCKED</span>
-                {{else if .BotUser.IsVip}}
-                    <span class="status-badge badge-vip">👑 VIP</span>
-                {{else}}
-                    <span class="status-badge badge-active">FAOL</span>
-                {{end}}
+                {{if .BotUser.IsBlocked}}<span class="status-badge badge-blocked">🚫 BLOCKED</span>
+                {{else if .BotUser.IsVip}}<span class="status-badge badge-vip">👑 VIP</span>
+                {{else}}<span class="status-badge badge-active">FAOL</span>{{end}}
             </div>
 
             <div class="info-grid">
-                <div class="info-item">
-                    <div class="info-label">ID</div>
-                    <div class="info-value">#{{.BotUser.Id}}</div>
-                </div>
-
-                <div class="info-item">
-                    <div class="info-label">Telegram ID</div>
-                    <div class="info-value" style="font-family:monospace;color:#3b82f6">{{.BotUser.TgId}}</div>
-                </div>
-
-                <div class="info-item">
-                    <div class="info-label">Username</div>
-                    <div class="info-value">
-                        {{if .BotUser.Username}}@{{.BotUser.Username}}{{else}}—{{end}}
-                    </div>
-                </div>
-
-                <div class="info-item">
-                    <div class="info-label">Qaysi bot</div>
-                    <div class="info-value">
-                        {{if .BotUser.Bot}}
-                            <a href="/admin/bots/{{.BotUser.Bot.Id}}" style="color:#3b82f6;text-decoration:none">
-                                {{.BotUser.Bot.BotName}} →
-                            </a>
-                        {{else}}
-                            <span style="color:#ef4444;font-style:italic">O'chirilgan bot</span>
-                        {{end}}
-                    </div>
-                </div>
-
-                <div class="info-item">
-                    <div class="info-label">Admin huquqi</div>
-                    <div class="info-value">
-                        {{if .BotUser.IsAdmin}}
-                            <span style="color:#3b82f6;font-weight:600">👮 Admin</span>
-                        {{else}}
-                            <span style="color:#6b7280">Yo'q</span>
-                        {{end}}
-                    </div>
-                </div>
-
-                <div class="info-item">
-                    <div class="info-label">Balans</div>
-                    <div class="info-value" style="color:#22c55e">{{printf "%.0f" .BotUser.Balance}} so'm</div>
-                </div>
-
-                <div class="info-item">
-                    <div class="info-label">Qo'shilgan sana</div>
-                    <div class="info-value">{{.BotUser.JoinedAt.Format "02 Jan 2006, 15:04"}}</div>
-                </div>
+                <div class="info-item"><div class="info-label">ID</div><div class="info-value">#{{.BotUser.Id}}</div></div>
+                <div class="info-item"><div class="info-label">Telegram ID</div><div class="info-value mono-badge" style="display:inline-block" data-copy="{{.BotUser.TgId}}">{{.BotUser.TgId}}</div></div>
+                <div class="info-item"><div class="info-label">Username</div><div class="info-value">{{if .BotUser.Username}}@{{.BotUser.Username}}{{else}}—{{end}}</div></div>
+                <div class="info-item"><div class="info-label">Qaysi bot</div><div class="info-value">
+                        {{if .BotUser.Bot}}<a href="/admin/bots/{{.BotUser.Bot.Id}}" style="color:var(--p2);text-decoration:none">{{.BotUser.Bot.BotName}} →</a>{{else}}<span style="color:var(--bad);font-style:italic">O'chirilgan bot</span>{{end}}
+                    </div></div>
+                <div class="info-item"><div class="info-label">Admin huquqi</div><div class="info-value">{{if .BotUser.IsAdmin}}<span style="color:var(--blue)">👮 Admin</span>{{else}}<span style="color:var(--faint)">Yo'q</span>{{end}}</div></div>
+                <div class="info-item"><div class="info-label">Balans</div><div class="info-value" style="color:var(--ok)">{{printf "%.0f" .BotUser.Balance}} so'm</div></div>
+                <div class="info-item"><div class="info-label">Qo'shilgan sana</div><div class="info-value">{{.BotUser.JoinedAt.Format "02 Jan 2006, 15:04"}}</div></div>
             </div>
         </div>
 
-        <div class="stats-row">
-            <div class="stat-card">
-                <div class="stat-num" style="color:#22c55e">{{printf "%.0f" .BotUser.Balance}}</div>
-                <div class="stat-label">Balans</div>
-            </div>
-            <div class="stat-card">
-                {{if .BotUser.IsVip}}
-                    <div class="stat-num" style="color:#a855f7">VIP</div>
-                {{else}}
-                    <div class="stat-num" style="color:#6b7280">Oddiy</div>
-                {{end}}
-                <div class="stat-label"> Daraja</div>
-            </div>
-            <div class="stat-card">
-                {{if .BotUser.IsBlocked}}
-                    <div class="stat-num" style="color:#ef4444">BLOK</div>
-                {{else}}
-                    <div class="stat-num" style="color:#22c55e">FAOL</div>
-                {{end}}
-                <div class="stat-label">Holat</div>
-            </div>
+        <div class="stats-row reveal">
+            <div class="stat-card" style="--c:#34d399"><div class="stat-ico"><i class="ti ti-wallet"></i></div><div class="stat-num count">{{printf "%.0f" .BotUser.Balance}}</div><div class="stat-label">Balans (so'm)</div></div>
+            <div class="stat-card" style="--c:#a78bfa"><div class="stat-ico"><i class="ti ti-crown"></i></div><div class="stat-num">{{if .BotUser.IsVip}}VIP{{else}}Oddiy{{end}}</div><div class="stat-label">Daraja</div></div>
+            <div class="stat-card" style="--c:{{if .BotUser.IsBlocked}}#fb7185{{else}}#34d399{{end}}"><div class="stat-ico"><i class="ti ti-shield"></i></div><div class="stat-num">{{if .BotUser.IsBlocked}}BLOK{{else}}FAOL{{end}}</div><div class="stat-label">Holat</div></div>
         </div>
 
-        <div class="card">
+        <div class="card reveal">
             <div class="card-title"><i class="ti ti-settings"></i> Boshqaruv</div>
             <div class="btn-group">
-                <form action="/admin/bot-users/{{.BotUser.Id}}/vip" method="post" style="display:inline">
-                    <button type="submit" class="btn btn-warning">
-                        <i class="ti ti-crown"></i>
-                        {{if .BotUser.IsVip}}VIP'ni olib tashlash{{else}}VIP qilish{{end}}
-                    </button>
-                </form>
-
-                <form action="/admin/bot-users/{{.BotUser.Id}}/toggle-block" method="post" style="display:inline">
-                    <button type="submit" class="btn btn-danger">
-                        <i class="ti ti-ban"></i>
-                        {{if .BotUser.IsBlocked}}Blokdan chiqarish{{else}}Bloklash{{end}}
-                    </button>
-                </form>
-
-                {{if .BotUser.Bot}}
-                    <a href="/admin/bots/{{.BotUser.Bot.Id}}" class="btn btn-ghost">
-                        <i class="ti ti-arrow-left"></i> Botga qaytish
-                    </a>
-                {{else}}
-                    <a href="/admin/all-users" class="btn btn-ghost">
-                        <i class="ti ti-arrow-left"></i> Orqaga
-                    </a>
-                {{end}}
+                <form action="/admin/bot-users/{{.BotUser.Id}}/vip" method="post"><button type="submit" class="btn btn-warning"><i class="ti ti-crown"></i> {{if .BotUser.IsVip}}VIP'ni olib tashlash{{else}}VIP qilish{{end}}</button></form>
+                <form action="/admin/bot-users/{{.BotUser.Id}}/toggle-block" method="post"><button type="submit" class="btn btn-danger"><i class="ti ti-ban"></i> {{if .BotUser.IsBlocked}}Blokdan chiqarish{{else}}Bloklash{{end}}</button></form>
+                {{if .BotUser.Bot}}<a href="/admin/bots/{{.BotUser.Bot.Id}}" class="btn btn-ghost"><i class="ti ti-arrow-left"></i> Botga qaytish</a>
+                {{else}}<a href="/admin/all-users" class="btn btn-ghost"><i class="ti ti-arrow-left"></i> Orqaga</a>{{end}}
             </div>
         </div>
 
     {{else if .IsAllAdminsPage}}
-        <div class="breadcrumb">
-            <i class="ti ti-layout-dashboard"></i>
-            <span style="color:#94a3b8">Barcha Adminlar</span>
+        <!-- ================= ADMINS ================= -->
+        <div class="page-head"><div><h1>Barcha <span>Adminlar</span></h1><p>UserBot ro'yxati va balanslarni boshqarish</p></div></div>
+
+        <div class="stats-row reveal">
+            <div class="stat-card" style="--c:#60a5fa"><div class="stat-ico"><i class="ti ti-user-check"></i></div><div class="stat-num count">{{if .Admins}}{{len .Admins}}{{else}}0{{end}}</div><div class="stat-label">Jami adminlar</div></div>
+            <div class="stat-card" style="--c:#34d399"><div class="stat-ico"><i class="ti ti-coin"></i></div><div class="stat-num" id="sumBalance">0</div><div class="stat-label">Umumiy balans (so'm)</div></div>
+            <div class="stat-card" style="--c:#fbbf24"><div class="stat-ico"><i class="ti ti-trophy"></i></div><div class="stat-num" id="maxBalance" style="font-size:22px;padding:5px 0">—</div><div class="stat-label">Eng boy admin</div></div>
+            <div class="stat-card" style="--c:#fb7185"><div class="stat-ico"><i class="ti ti-wallet-off"></i></div><div class="stat-num" id="zeroCount">0</div><div class="stat-label">Balansi 0 adminlar</div></div>
         </div>
 
-        <div class="card">
-            <div class="card-title">
-                <i class="ti ti-user-check"></i> Adminlar (UserBot)
-                <span style="margin-left:auto;font-size:11px;color:#475569;font-weight:400">
-                    {{if .Admins}}{{len .Admins}}{{else}}0{{end}} ta
-                </span>
-            </div>
-
+        <!-- Balansi bor adminlar -->
+        <div class="card reveal">
+            <div class="card-title"><i class="ti ti-user-check"></i> Balansi bor adminlar (UserBot)
+                <span class="right"><button class="btn btn-ghost btn-sm" onclick="exportCSV('adminsTable','admins.csv')"><i class="ti ti-download"></i> CSV</button></span></div>
+            <div class="tools"><div class="tool-input"><i class="ti ti-search"></i><input type="text" data-search="adminsTable" placeholder="Username yoki TgId..."></div></div>
             <div class="table-wrap">
-                <table class="users-table">
-                    <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Foydalanuvchi</th>
-                        <th>TgId</th>
-                        <th>Balans</th>
-                        <th>Yaratilgan</th>
-                        <th>Balansni o'zgartirish</th>
-                    </tr>
-                    </thead>
+                <table class="users-table" id="adminsTable">
+                    <thead><tr><th class="sortable">ID</th><th class="sortable">Foydalanuvchi</th><th>TgId</th><th class="sortable">Balans</th><th class="sortable">Yaratilgan</th><th>Balansni o'zgartirish</th></tr></thead>
                     <tbody>
-                    {{range .Admins}}
+                    {{range .Admins}}{{if ne .Balance 0.0}}
                         <tr>
                             <td class="row-id">#{{.Id}}</td>
-
-                            <td>
-                                <div class="user-cell">
-                                    <div class="user-mini-avatar">
-                                        {{if and .Username (gt (len .Username) 0)}}
-                                            {{slice .Username 0 1}}
-                                        {{else}}
-                                            <i class="ti ti-user"></i>
-                                        {{end}}
-                                    </div>
-                                    <div>
-                                        <div class="user-full-name">
-                                            {{if .Username}}@{{.Username}}{{else}}<span style="color:#64748b; font-style:italic;">username yo'q</span>{{end}}
-                                        </div>
-                                    </div>
-                                </div>
-                            </td>
-
-                            <td><span class="mono-badge">{{.TgId}}</span></td>
-
-                            <td style="color:#10b981;font-weight:600">{{printf "%.0f" .Balance}} so'm</td>
-
-                            <td style="font-size:11px;color:#64748b">
-                                {{.CreatedAt.Format "02 Jan 2006, 15:04"}}
-                            </td>
-
+                            <td><div class="user-cell"><div class="user-mini-avatar" data-initial="{{.Username}}"><i class="ti ti-user"></i></div>
+                                    <div class="user-full-name" data-admin-name="{{.Username}}">{{if .Username}}@{{.Username}}{{else}}<span class="muted">username yo'q</span>{{end}}</div></div></td>
+                            <td><span class="mono-badge" data-copy="{{.TgId}}">{{.TgId}}</span></td>
+                            <td class="bal" data-bal="{{printf "%.0f" .Balance}}" style="color:var(--ok);font-weight:700">{{printf "%.0f" .Balance}} so'm</td>
+                            <td style="font-size:12px;color:var(--muted)">{{.CreatedAt.Format "02 Jan 2006, 15:04"}}</td>
                             <td class="actions-cell">
-                                <form method="POST" action="/admin/users/{{.Id}}/balance"
-                                      style="display:flex;gap:6px;align-items:center;flex-wrap:nowrap;">
-                                    <select name="mode"
-                                            style="padding:6px 8px;border-radius:6px;border:1px solid #334155;background:#1e293b;color:#f8fafc;font-size:12px;">
-                                        <option value="adjust">+/-</option>
-                                        <option value="set">O'rnatish</option>
-                                    </select>
-                                    <input
-                                            type="number"
-                                            name="amount"
-                                            step="0.01"
-                                            placeholder="Summa"
-                                            required
-                                            style="width:90px;padding:6px 8px;border-radius:6px;border:1px solid #334155;background:#1e293b;color:#f8fafc;font-size:12px;"
-                                    >
-                                    <button type="submit"
-                                            style="background:rgba(34,197,94,0.15);color:#22c55e;border:none;cursor:pointer;padding:6px 10px;border-radius:6px;font-size:12px;">
-                                        <i class="ti ti-check"></i>
-                                    </button>
+                                <form method="POST" action="/admin/users/{{.Id}}/balance" class="inline-form">
+                                    <select name="mode"><option value="adjust">+/-</option><option value="set">O'rnatish</option></select>
+                                    <input type="number" name="amount" step="0.01" placeholder="Summa" required>
+                                    <button type="submit"><i class="ti ti-check"></i></button>
                                 </form>
                             </td>
                         </tr>
-                    {{else}}
-                        <tr>
-                            <td colspan="6" class="empty-state" style="padding: 40px; text-align: center;">
-                                <i class="ti ti-users-off" style="font-size:32px;display:block;margin-bottom:12px;color:#64748b;"></i>
-                                <p style="color:#94a3b8;">Hali adminlar yo'q</p>
-                            </td>
-                        </tr>
+                    {{end}}{{else}}
+                        <tr><td colspan="6" class="empty-state"><i class="ti ti-users-off"></i><p>Hali adminlar yo'q</p></td></tr>
                     {{end}}
                     </tbody>
                 </table>
             </div>
+            <div class="no-result">Hech narsa topilmadi 🔍</div>
+        </div>
+
+        <!-- Balansi 0 adminlar (yig'ilgan) -->
+        <div class="card reveal" id="zeroCard" style="display:none">
+            <details>
+                <summary class="card-title" style="cursor:pointer;margin-bottom:0;list-style:none">
+                    <i class="ti ti-wallet-off" style="color:var(--bad)"></i> Balansi 0 bo'lgan adminlar
+                    <span class="right"><span class="status-badge badge-off" id="zeroBadge">0 ta</span> <i class="ti ti-chevron-down" style="font-size:16px"></i></span>
+                </summary>
+                <div style="margin-top:18px">
+                    <div class="tools">
+                        <div class="tool-input"><i class="ti ti-search"></i><input type="text" data-search="zeroAdminsTable" placeholder="Username yoki TgId..."></div>
+                        <button class="btn btn-ghost btn-sm" onclick="exportCSV('zeroAdminsTable','admins-zero-balance.csv')"><i class="ti ti-download"></i> CSV</button>
+                    </div>
+                    <div class="table-wrap">
+                        <table class="users-table" id="zeroAdminsTable">
+                            <thead><tr><th class="sortable">ID</th><th class="sortable">Foydalanuvchi</th><th>TgId</th><th class="sortable">Yaratilgan</th><th>Balansni o'zgartirish</th></tr></thead>
+                            <tbody>
+                            {{range .Admins}}{{if eq .Balance 0.0}}
+                                <tr>
+                                    <td class="row-id">#{{.Id}}</td>
+                                    <td><div class="user-cell"><div class="user-mini-avatar" data-initial="{{.Username}}"><i class="ti ti-user"></i></div>
+                                            <div class="user-full-name">{{if .Username}}@{{.Username}}{{else}}<span class="muted">username yo'q</span>{{end}}</div></div></td>
+                                    <td><span class="mono-badge" data-copy="{{.TgId}}">{{.TgId}}</span></td>
+                                    <td style="font-size:12px;color:var(--muted)">{{.CreatedAt.Format "02 Jan 2006, 15:04"}}</td>
+                                    <td class="actions-cell">
+                                        <form method="POST" action="/admin/users/{{.Id}}/balance" class="inline-form">
+                                            <select name="mode"><option value="adjust">+/-</option><option value="set">O'rnatish</option></select>
+                                            <input type="number" name="amount" step="0.01" placeholder="Summa" required>
+                                            <button type="submit"><i class="ti ti-check"></i></button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            {{end}}{{end}}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="no-result">Hech narsa topilmadi 🔍</div>
+                </div>
+            </details>
         </div>
 
     {{else if .IsAllUsersPage}}
+        <!-- ================= ALL USERS ================= -->
+        <div class="page-head"><div><h1>Barcha <span>Obunachilar</span></h1><p>Barcha botlar bo'yicha foydalanuvchilar</p></div></div>
+        <div class="card reveal">
+            <div class="card-title"><i class="ti ti-users"></i> Barcha Botlarning Obunachilari
+                <span class="right">{{if .Users}}{{len .Users}}{{else}}0{{end}} ta obunachi
+        <button class="btn btn-ghost btn-sm" onclick="exportCSV('allUsersTable','subscribers.csv')"><i class="ti ti-download"></i> CSV</button></span></div>
 
-        <div class="card">
-            <div class="card-title">
-                <i class="ti ti-users"></i> Barcha Botlarning Obunachilari
-                <span style="margin-left:auto;font-size:11px;color:#475569;font-weight:400">
-                    {{if .Users}}{{len .Users}}{{else}}0{{end}} ta obunachi
-                </span>
+            <form method="GET" action="/admin/all-users" class="tools">
+                <div class="tool-input"><i class="ti ti-id"></i><input type="text" name="tg_id" value="{{.SearchTgId}}" placeholder="Telegram ID bo'yicha qidirish (server)..."></div>
+                <button type="submit" class="btn btn-primary btn-sm"><i class="ti ti-search"></i> Qidirish</button>
+                {{if .SearchTgId}}<a href="/admin/all-users" class="btn btn-ghost btn-sm"><i class="ti ti-x"></i> Tozalash</a>{{end}}
+            </form>
+            <div class="tools">
+                <div class="tool-input"><i class="ti ti-filter"></i><input type="text" data-search="allUsersTable" placeholder="Natijalar ichidan tez filtr..."></div>
+                <div class="chips" data-filter="allUsersTable">
+                    <span class="chip on" data-v="">Hammasi</span><span class="chip" data-v="normal">Oddiy</span><span class="chip" data-v="vip">👑 VIP</span><span class="chip" data-v="blocked">🚫 Blok</span>
+                </div>
             </div>
 
-            <form method="GET" action="/admin/all-users"
-                  style="display:flex;flex-wrap:nowrap;flex-direction:row;gap:8px;padding:12px 16px;align-items:center;width:100%;box-sizing:border-box;">
-                <input
-                        type="text"
-                        name="tg_id"
-                        value="{{.SearchTgId}}"
-                        placeholder="Telegram ID bo'yicha qidirish..."
-                        style="flex:1 1 auto;min-width:0;max-width:280px;padding:8px 12px;border-radius:8px;border:1px solid #334155;background:#1e293b;color:#f8fafc;font-size:13px;box-sizing:border-box;"
-                >
-                <button type="submit"
-                        style="flex:0 0 auto;background:rgba(59,130,246,0.15);color:#3b82f6;border:none;cursor:pointer;padding:8px 14px;border-radius:8px;font-size:13px;white-space:nowrap;">
-                    <i class="ti ti-search"></i> Qidirish
-                </button>
-                {{if .SearchTgId}}
-                    <a href="/admin/all-users"
-                       style="flex:0 0 auto;background:rgba(148,163,184,0.15);color:#94a3b8;padding:8px 14px;border-radius:8px;font-size:13px;text-decoration:none;white-space:nowrap;">
-                        <i class="ti ti-x"></i> Tozalash
-                    </a>
-                {{end}}
-            </form>
             <div class="table-wrap">
-                <table class="users-table">
-                    <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Telegram ID</th>
-                        <th>Foydalanuvchi</th>
-                        <th>Qaysi Botga</th>
-                        <th>Status</th>
-                        <th>Qo'shilgan sana</th>
-                    </tr>
-                    </thead>
+                <table class="users-table" id="allUsersTable">
+                    <thead><tr><th class="sortable">ID</th><th class="sortable">Telegram ID</th><th class="sortable">Foydalanuvchi</th><th class="sortable">Qaysi Botga</th><th>Status</th><th class="sortable">Qo'shilgan sana</th></tr></thead>
                     <tbody>
                     {{range .Users}}
-                        <tr class="{{if .IsBlocked}}row-blocked{{end}}" onclick="window.location='/admin/bot-users/{{.Id}}'" style="cursor:pointer">
+                        <tr class="clickable-row {{if .IsBlocked}}row-blocked{{end}}" data-status="{{if .IsBlocked}}blocked{{else if .IsVip}}vip{{else}}normal{{end}}" onclick="window.location='/admin/bot-users/{{.Id}}'">
                             <td class="row-id">#{{.Id}}</td>
-
-                            <td>
-                                <span class="mono-badge" style="color: #3b82f6;">{{.TgId}}</span>
-                            </td>
-
-                            <td>
-                                <div style="display:flex; align-items:center; gap:10px;">
-
-                                    <div style="min-width:0;">
-                                        <div style="font-weight:500; color:#f8fafc; max-width:160px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"
-                                             title="{{.FirstName}} {{.LastName}}">
-                                            {{if or .FirstName .LastName}}
-                                                {{.FirstName}} {{.LastName}}
-                                            {{else}}
-                                                <span style="color:#64748b; font-style:italic;">Ismsiz</span>
-                                            {{end}}
-                                        </div>
-                                        <small style="color:#94a3b8; display:block; max-width:160px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
-                                            {{if .Username}}@{{.Username}}{{else}}username yo'q{{end}}
-                                        </small>
-                                    </div>
-                                </div>
-                            </td>
-
-                            <td>
-                                <div style="font-weight: 500; color: #f8fafc; max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"
-                                     title="{{if .Bot}}{{.Bot.BotName}} ({{.Bot.BotUsername}}){{end}}">
-                                    {{if .Bot}}
-                                        {{.Bot.BotName}} <small style="color: #94a3b8;">({{.Bot.BotUsername}})</small>
-                                    {{else}}
-                                        <span style="color: #64748b;">Noma'lum Bot</span>
-                                    {{end}}
-                                </div>
-                            </td>
-
-                            <td>
-                                {{if .IsBlocked}}
-                                    <span class="status-badge badge-blocked">🚫 BLOCKED</span>
-                                {{else if .IsVip}}
-                                    <span class="status-badge badge-vip">👑 VIP</span>
-                                {{else}}
-                                    <span class="status-badge">Oddiy</span>
-                                {{end}}
-                            </td>
-
-                            <td style="font-size:12px;color:#64748b">
-                                {{.JoinedAt.Format "02 Jan 2006, 15:04"}}
-                            </td>
+                            <td><span class="mono-badge" data-copy="{{.TgId}}">{{.TgId}}</span></td>
+                            <td><div class="user-cell"><div class="user-mini-avatar" data-initial="{{.FirstName}}{{.Username}}"><i class="ti ti-user"></i></div>
+                                    <div><div class="user-full-name">{{if or .FirstName .LastName}}{{.FirstName}} {{.LastName}}{{else}}<span class="muted">Ismsiz</span>{{end}}</div>
+                                        <div class="user-username-small">{{if .Username}}@{{.Username}}{{else}}username yo'q{{end}}</div></div></div></td>
+                            <td>{{if .Bot}}<span class="tag-type">{{.Bot.BotName}}</span> <small style="color:var(--faint)">{{.Bot.BotUsername}}</small>{{else}}<span class="muted">Noma'lum Bot</span>{{end}}</td>
+                            <td>{{if .IsBlocked}}<span class="status-badge badge-blocked">🚫 BLOCKED</span>{{else if .IsVip}}<span class="status-badge badge-vip">👑 VIP</span>{{else}}<span class="status-badge">Oddiy</span>{{end}}</td>
+                            <td style="font-size:12px;color:var(--muted)">{{.JoinedAt.Format "02 Jan 2006, 15:04"}}</td>
                         </tr>
                     {{else}}
-                        <tr>
-                            <td colspan="6" class="empty-state" style="padding: 40px; text-align: center;">
-                                <i class="ti ti-users-off" style="font-size:32px;display:block;margin-bottom:12px;color: #64748b;"></i>
-                                <p style="color: #94a3b8;">Hali hech qanday obunachi yo'q</p>
-                            </td>
-                        </tr>
+                        <tr><td colspan="6" class="empty-state"><i class="ti ti-users-off"></i><p>Hali hech qanday obunachi yo'q</p></td></tr>
                     {{end}}
                     </tbody>
                 </table>
             </div>
+            <div class="no-result">Hech narsa topilmadi 🔍</div>
         </div>
 
     {{else}}
-
-        <div class="breadcrumb">
-            <i class="ti ti-layout-dashboard"></i>
-            <span style="color:#94a3b8">Asosiy statistika</span>
+        <!-- ================= DASHBOARD ================= -->
+        <div class="page-head">
+            <div><h1 id="greet">Salom, <span>Admin</span> 👋</h1><p>Platformangizning bugungi umumiy ko'rinishi</p></div>
+            <div class="btn-group"><a href="/admin/bots" class="btn btn-primary"><i class="ti ti-robot"></i> Botlarni boshqarish</a>
+                <button class="btn btn-ghost" onclick="location.reload()"><i class="ti ti-refresh"></i> Yangilash</button></div>
         </div>
 
-        <div class="stats-row">
-            <div class="stat-card">
-                <div class="stat-num" style="color:#3b82f6">{{.BotCount}}</div>
-                <div class="stat-label">Jami Botlar</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-num" style="color:#22c55e">{{.ActiveBotCount}}</div>
-                <div class="stat-label">Faol Botlar</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-num" style="color:#ef4444">{{.InactiveBotCount}}</div>
-                <div class="stat-label">O'chirilgan Botlar</div>
-            </div>
+        <div class="stats-row reveal">
+            <div class="stat-card" style="--c:#8b5cf6"><div class="stat-ico"><i class="ti ti-robot"></i></div><div class="stat-num count">{{.BotCount}}</div><div class="stat-label">Ochiq Botlar (jami)</div><div class="stat-bar"><b data-w="100"></b></div></div>
+            <div class="stat-card" style="--c:#34d399"><div class="stat-ico"><i class="ti ti-player-play"></i></div><div class="stat-num count" id="kActive">{{.ActiveBotCount}}</div><div class="stat-label">Ishlayapti</div><div class="stat-bar"><b id="barActive" data-w="0"></b></div></div>
+            <div class="stat-card" style="--c:#fbbf24"><div class="stat-ico"><i class="ti ti-player-pause"></i></div><div class="stat-num count" id="kOff">{{.InactiveBotCount}}</div><div class="stat-label">Vaqtincha to'xtatilgan (ochiq)</div><div class="stat-bar"><b id="barOff" data-w="0"></b></div></div>
+            <div class="stat-card" style="--c:#60a5fa"><div class="stat-ico"><i class="ti ti-user-check"></i></div><div class="stat-num count">{{.UserCount}}</div><div class="stat-label">Adminlar (UserBot)</div><div class="stat-bar"><b data-w="60"></b></div></div>
+            <div class="stat-card" style="--c:#f472b6"><div class="stat-ico"><i class="ti ti-users"></i></div><div class="stat-num count">{{.BotUserCount}}</div><div class="stat-label">Bot A'zolari (BotUser)</div><div class="stat-bar"><b data-w="85"></b></div></div>
+            <div class="stat-card" style="--c:#22d3ee"><div class="stat-ico"><i class="ti ti-category"></i></div><div class="stat-num count">{{.BotTypeCount}}</div><div class="stat-label">Bot Turlari (BotType)</div><div class="stat-bar"><b data-w="40"></b></div></div>
         </div>
 
-        <div class="stats-row">
-            <div class="stat-card">
-                <div class="stat-num" style="color:#3b82f6">{{.UserCount}}</div>
-                <div class="stat-label">Jami Adminlar (UserBot)</div>
+        <div class="grid-2 mb reveal">
+            <div class="card">
+                <div class="card-title"><i class="ti ti-chart-donut-3"></i> Qaysi turda nechta bot <span class="right" id="typeTotalNote"></span></div>
+                <div class="donut-wrap">
+                    <div class="donut"><svg viewBox="0 0 120 120" id="donutSvg"></svg>
+                        <div class="donut-center"><b id="donutTotal">0</b><span>bot</span></div></div>
+                    <div class="legend" id="legend"></div>
+                </div>
             </div>
-            <div class="stat-card">
-                <div class="stat-num" style="color:#a855f7">{{.BotUserCount}}</div>
-                <div class="stat-label">Jami Bot A'zolari (BotUser)</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-num" style="color:#a855f7;font-size:22px;padding-top:3px">{{.BotTypeCount}}</div>
-                <div class="stat-label">Bot Turlari (BotType)</div>
+
+            <div class="card">
+                <div class="card-title"><i class="ti ti-trophy"></i> Botlar reytingi <span class="right">A'zolar soni bo'yicha</span></div>
+                <div class="board" id="board"></div>
             </div>
         </div>
 
-        ```
-        <div class="card">
-            <div class="card-title">
-                <i class="ti ti-robot"></i> Oxirgi Yaratilgan Botlar (CreatedBot)
-                <span style="margin-left:auto;font-size:13px;color:#64748b">Jami: {{.BotCount}} ta</span>
+        <div class="grid-2 wide mb reveal">
+            <div class="card">
+                <div class="card-title"><i class="ti ti-bulb"></i> Tezkor tahlil</div>
+                <div class="insights">
+                    <div class="insight"><div class="ico"><i class="ti ti-users"></i></div><div><b id="insAvg">0</b><span>Bot boshiga o'rtacha a'zo</span></div></div>
+                    <div class="insight"><div class="ico" style="background:var(--grad2)"><i class="ti ti-crown"></i></div><div><b id="insTop">—</b><span>Eng mashhur bot</span></div></div>
+                    <div class="insight"><div class="ico" style="background:linear-gradient(135deg,#10b981,#22d3ee)"><i class="ti ti-category-2"></i></div><div><b id="insType">—</b><span>Eng ko'p bot turi</span></div></div>
+                    <div class="insight"><div class="ico" style="background:linear-gradient(135deg,#f59e0b,#ef4444)"><i class="ti ti-ghost"></i></div><div><b id="insEmpty">0</b><span>A'zosiz botlar</span></div></div>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-title"><i class="ti ti-heartbeat"></i> Faollik darajasi</div>
+                <div class="ring-wrap">
+                    <div class="ring"><svg width="120" height="120" viewBox="0 0 120 120"><defs><linearGradient id="rg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8b5cf6"/><stop offset="1" stop-color="#22d3ee"/></linearGradient></defs><circle class="bg" cx="60" cy="60" r="50"/><circle class="fg" id="ringFg" cx="60" cy="60" r="50"/></svg>
+                        <div class="ring-c"><div id="ringPct">0%</div><small>ishlayapti</small></div></div>
+                    <div style="flex:1;min-width:150px;font-size:13px;color:var(--muted);line-height:1.7">
+                        Hammasi <b style="color:var(--ok)">ochiq</b>: <b style="color:var(--text)" id="ringOpen">0</b> ta bot.<br>
+                        Shundan <b style="color:var(--text)" id="ringTxt">0</b> tasi hozir ishlayapti,<br>
+                        <b style="color:var(--warn)" id="ringPaused">0</b> tasi vaqtincha to'xtatilgan (o'chirilmagan).</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card reveal">
+            <div class="card-title"><i class="ti ti-robot"></i> Oxirgi Yaratilgan Botlar (CreatedBot)
+                <span class="right">Jami: {{.BotCount}} ta <button class="btn btn-ghost btn-sm" onclick="exportCSV('botsTable','bots.csv')"><i class="ti ti-download"></i> CSV</button></span></div>
+            <div class="tools">
+                <div class="tool-input"><i class="ti ti-search"></i><input type="text" data-search="botsTable" placeholder="Bot nomi, username, tur..."></div>
+                <div class="chips" data-filter="botsTable"><span class="chip on" data-v="">Hammasi (ochiq)</span><span class="chip" data-v="on">🟢 Ishlayapti</span><span class="chip" data-v="off">🟡 To'xtatilgan</span></div>
+                <div class="chips" id="typeChips" data-filter-type="botsTable"></div>
             </div>
             <div class="table-wrap">
-                <table>
-                    <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Bot Nomi</th>
-                        <th>Username</th>
-                        <th>Bot Turi</th>
-                        <th>Egasi (UserBot)</th>
-                        <th>A'zolar</th>
-                        <th>Holat</th>
-                        <th>Amal</th>
-                    </tr>
-                    </thead>
+                <table id="botsTable">
+                    <thead><tr><th class="sortable">ID</th><th class="sortable">Bot Nomi</th><th>Username</th><th class="sortable">Bot Turi</th><th>Egasi</th><th class="sortable">A'zolar</th><th>Reyting</th><th>Holat</th><th>Amal</th></tr></thead>
                     <tbody>
                     {{range .LatestBots}}
-                        <tr onclick="window.location='/admin/bots/{{.Id}}'" class="clickable-row">
+                        <tr onclick="window.location='/admin/bots/{{.Id}}'" class="clickable-row"
+                            data-state="{{if .IsActive}}on{{else}}off{{end}}" data-type="{{if .BotType}}{{.BotType.Name}}{{else}}Noma'lum{{end}}" data-users="{{.UserCount}}" data-name="{{.BotName}}" data-id="{{.Id}}">
                             <td class="row-id">#{{.Id}}</td>
-
                             <td><strong>{{.BotName}}</strong></td>
-
-                            <td style="color:#3b82f6">
-                                {{if .BotUsername}}@{{.BotUsername}}{{else}}<span style="color:#64748b; font-style:italic;">yo'q</span>{{end}}
-                            </td>
-
-                            <td>
-                        <span class="mono-badge" style="color:#22c55e">
-                            {{if .BotType}}{{.BotType.Name}}{{else}}Noma'lum{{end}}
-                        </span>
-                            </td>
-
-                            <td>
-                                {{if .Owner}}
-                                    {{if .Owner.Username}}@{{.Owner.Username}}{{else}}ID: {{.Owner.TgId}}{{end}}
-                                {{else}}
-                                    <span style="color:#ef4444; font-style:italic;">Egasiz bot</span>
-                                {{end}}
-                            </td>
-
-                            <td style="color:#3b82f6;font-weight:600">{{.UserCount}}</td>
-
-                            <td>
-                                {{if .IsActive}}
-                                    <span class="status-badge badge-active">ACTIVE</span>
-                                {{else}}
-                                    <span class="status-badge badge-off">OFF</span>
-                                {{end}}
-                            </td>
-
-                            <td>
-                                <a href="/admin/bots/{{.Id}}" class="view-link" onclick="event.stopPropagation()">
-                                    Boshqarish <i class="ti ti-arrow-right"></i>
-                                </a>
-                            </td>
+                            <td style="color:var(--p2)">{{if .BotUsername}}@{{.BotUsername}}{{else}}<span class="muted">yo'q</span>{{end}}</td>
+                            <td><span class="tag-type">{{if .BotType}}{{.BotType.Name}}{{else}}Noma'lum{{end}}</span></td>
+                            <td>{{if .Owner}}{{if .Owner.Username}}@{{.Owner.Username}}{{else}}ID: {{.Owner.TgId}}{{end}}{{else}}<span style="color:var(--bad);font-style:italic">Egasiz bot</span>{{end}}</td>
+                            <td style="color:var(--blue);font-weight:700">{{.UserCount}}</td>
+                            <td><span class="stars rate"></span></td>
+                            <td>{{if .IsActive}}<span class="status-badge badge-active">OCHIQ</span>{{else}}<span class="status-badge badge-pause">OCHIQ · PAUZA</span>{{end}}</td>
+                            <td><a href="/admin/bots/{{.Id}}" class="view-link" onclick="event.stopPropagation()">Boshqarish <i class="ti ti-arrow-right"></i></a></td>
                         </tr>
                     {{else}}
-                        <tr>
-                            <td colspan="8" class="empty-state">
-                                <i class="ti ti-robot-off" style="font-size:32px;display:block;margin-bottom:12px;opacity:0.6"></i>
-                                <p>Hali birorta ham bot yaratilmagan</p>
-                            </td>
-                        </tr>
+                        <tr><td colspan="9" class="empty-state"><i class="ti ti-robot-off"></i><p>Hali birorta ham bot yaratilmagan</p></td></tr>
                     {{end}}
                     </tbody>
                 </table>
             </div>
-
-            <!-- Botlar uchun pagination -->
+            <div class="no-result">Hech narsa topilmadi 🔍</div>
             {{if gt .TotalBotPages 1}}
                 <div class="pagination">
-                    {{if gt .BotPage 1}}
-                        <a href="/admin/dashboard?bot_page={{sub .BotPage 1}}&amp;user_page={{.UserPage}}" class="page-btn">← Oldingi</a>
-                    {{end}}
+                    {{if gt .BotPage 1}}<a href="/admin/dashboard?bot_page={{sub .BotPage 1}}&amp;user_page={{.UserPage}}" class="page-btn">← Oldingi</a>{{end}}
                     <span class="page-info">Sahifa {{.BotPage}} / {{.TotalBotPages}}</span>
-                    {{if lt .BotPage .TotalBotPages}}
-                        <a href="/admin/dashboard?bot_page={{add .BotPage 1}}&amp;user_page={{.UserPage}}" class="page-btn">Keyingi →</a>
-                    {{end}}
+                    {{if lt .BotPage .TotalBotPages}}<a href="/admin/dashboard?bot_page={{add .BotPage 1}}&amp;user_page={{.UserPage}}" class="page-btn">Keyingi →</a>{{end}}
                 </div>
             {{end}}
         </div>
 
-        <div class="breadcrumb">
-            <i class="ti ti-layout-dashboard"></i>
-            <span style="color:#94a3b8">Barcha Botlarning Obunachilari</span>
-        </div>
-
-        <div class="card">
-            <div class="card-title">
-                <i class="ti ti-users"></i> Barcha Botlarning Obunachilari
-                <span style="margin-left:auto;font-size:13px;color:#64748b">Jami: {{.BotUserCount}} ta (unikal)</span>
+        <div class="card reveal">
+            <div class="card-title"><i class="ti ti-users"></i> Barcha Botlarning Obunachilari
+                <span class="right">Jami: {{.BotUserCount}} ta (unikal) <button class="btn btn-ghost btn-sm" onclick="exportCSV('dashUsersTable','users.csv')"><i class="ti ti-download"></i> CSV</button></span></div>
+            <div class="tools">
+                <div class="tool-input"><i class="ti ti-search"></i><input type="text" data-search="dashUsersTable" placeholder="Ism, username, TgId, bot..."></div>
+                <div class="chips" data-filter="dashUsersTable"><span class="chip on" data-v="">Hammasi</span><span class="chip" data-v="normal">Oddiy</span><span class="chip" data-v="vip">👑 VIP</span><span class="chip" data-v="blocked">🚫 Blok</span></div>
             </div>
             <div class="table-wrap">
-                <table class="users-table">
-                    <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Bot Nomi</th>
-                        <th>Foydalanuvchi</th>
-                        <th>TgId</th>
-                        <th>Status</th>
-                        <th>Qo'shilgan sana</th>
-                    </tr>
-                    </thead>
+                <table class="users-table" id="dashUsersTable">
+                    <thead><tr><th class="sortable">ID</th><th class="sortable">Bot Nomi</th><th class="sortable">Foydalanuvchi</th><th>TgId</th><th>Status</th><th class="sortable">Qo'shilgan sana</th></tr></thead>
                     <tbody>
                     {{range .Users}}
-                        <tr class="{{if .IsBlocked}}row-blocked{{end}}"
-                            onclick="window.location='/admin/bot-users/{{.Id}}'"
-                            style="cursor:pointer">
-
+                        <tr class="clickable-row {{if .IsBlocked}}row-blocked{{end}}" data-status="{{if .IsBlocked}}blocked{{else if .IsVip}}vip{{else}}normal{{end}}" onclick="window.location='/admin/bot-users/{{.Id}}'">
                             <td class="row-id">#{{.Id}}</td>
-
-                            <td>
-                                {{if .Bot}}
-                                    <strong>{{.Bot.BotName}}</strong><br>
-                                    <small style="color:#64748b">
-                                        {{if .Bot.BotUsername}}@{{.Bot.BotUsername}}{{else}}username yo'q{{end}}
-                                    </small>
-                                {{else}}
-                                    <span style="color:#ef4444; font-style:italic;">O'chirilgan bot</span>
-                                {{end}}
-                            </td>
-
-                            <td>
-                                <div class="user-cell">
-                                    <div style="min-width:0;">
-                                        <div class="user-full-name"
-                                             style="max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"
-                                             title="{{.FirstName}} {{.LastName}}">
-                                            {{if or .FirstName .LastName}}
-                                                {{.FirstName}} {{.LastName}}
-                                            {{else}}
-                                                <span style="color:#64748b; font-style:italic;">Ismsiz foydalanuvchi</span>
-                                            {{end}}
-                                        </div>
-                                        <div class="user-username-small"
-                                             style="max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
-                                            {{if .Username}}
-                                                @{{.Username}}
-                                            {{else}}
-                                                <span style="color:#64748b; font-style:italic;">username yo'q</span>
-                                            {{end}}
-                                        </div>
-                                    </div>
-                                </div>
-                            </td>
-
-                            <td>
-                                <span class="mono-badge">{{.TgId}}</span>
-                            </td>
-
-                            <td>
-                                {{if .IsBlocked}}
-                                    <span class="status-badge badge-blocked">🚫 BLOCKED</span>
-                                {{else if .IsVip}}
-                                    <span class="status-badge badge-vip">👑 VIP</span>
-                                {{else}}
-                                    <span class="status-badge">Oddiy</span>
-                                {{end}}
-                            </td>
-
-                            <td style="font-size:12px;color:#64748b">
-                                {{.JoinedAt.Format "02 Jan 2006, 15:04"}}
-                            </td>
+                            <td>{{if .Bot}}<strong>{{.Bot.BotName}}</strong><br><small style="color:var(--faint)">{{if .Bot.BotUsername}}@{{.Bot.BotUsername}}{{else}}username yo'q{{end}}</small>{{else}}<span style="color:var(--bad);font-style:italic">O'chirilgan bot</span>{{end}}</td>
+                            <td><div class="user-cell"><div class="user-mini-avatar" data-initial="{{.FirstName}}{{.Username}}"><i class="ti ti-user"></i></div>
+                                    <div><div class="user-full-name">{{if or .FirstName .LastName}}{{.FirstName}} {{.LastName}}{{else}}<span class="muted">Ismsiz foydalanuvchi</span>{{end}}</div>
+                                        <div class="user-username-small">{{if .Username}}@{{.Username}}{{else}}<span class="muted">username yo'q</span>{{end}}</div></div></div></td>
+                            <td><span class="mono-badge" data-copy="{{.TgId}}">{{.TgId}}</span></td>
+                            <td>{{if .IsBlocked}}<span class="status-badge badge-blocked">🚫 BLOCKED</span>{{else if .IsVip}}<span class="status-badge badge-vip">👑 VIP</span>{{else}}<span class="status-badge">Oddiy</span>{{end}}</td>
+                            <td style="font-size:12px;color:var(--muted)">{{.JoinedAt.Format "02 Jan 2006, 15:04"}}</td>
                         </tr>
                     {{else}}
-                        <tr>
-                            <td colspan="6" class="empty-state" style="padding:40px;text-align:center;">
-                                <i class="ti ti-users-off" style="font-size:36px;display:block;margin-bottom:12px;opacity:0.6;color:#64748b;"></i>
-                                <p style="color:#94a3b8;">Hali hech qanday obunachi yo'q</p>
-                            </td>
-                        </tr>
+                        <tr><td colspan="6" class="empty-state"><i class="ti ti-users-off"></i><p>Hali hech qanday obunachi yo'q</p></td></tr>
                     {{end}}
                     </tbody>
                 </table>
             </div>
-            <!-- Foydalanuvchilar uchun pagination -->
+            <div class="no-result">Hech narsa topilmadi 🔍</div>
             {{if gt .TotalUserPages 1}}
                 <div class="pagination">
                     {{if gt .UserPage 1}}
-                        <a href="/admin/dashboard?bot_page={{.BotPage}}&amp;user_page={{sub .UserPage 1}}" class="page-btn">← Oldingi</a>
                         <a href="/admin/dashboard?bot_page={{.BotPage}}&amp;user_page=1" class="page-btn" title="Birinchi sahifa">« Boshi</a>
+                        <a href="/admin/dashboard?bot_page={{.BotPage}}&amp;user_page={{sub .UserPage 1}}" class="page-btn">← Oldingi</a>
                     {{end}}
                     <span class="page-info">Sahifa {{.UserPage}} / {{.TotalUserPages}}</span>
                     {{if lt .UserPage .TotalUserPages}}
@@ -1646,177 +759,154 @@
                 </div>
             {{end}}
         </div>
-
-        <style>
-            .pagination {
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                gap: 10px;
-                padding: 16px;
-                flex-wrap: wrap;
-                border-top: 1px solid rgba(148,163,184,0.15);
-            }
-            .page-btn {
-                padding: 6px 14px;
-                background: #1e293b;
-                color: #3b82f6;
-                border-radius: 6px;
-                text-decoration: none;
-                font-size: 13px;
-                font-weight: 500;
-                transition: background 0.15s ease;
-                white-space: nowrap;
-            }
-            .page-btn:hover {
-                background: #334155;
-            }
-            .page-btn-disabled {
-                padding: 6px 14px;
-                background: #0f172a;
-                color: #475569;
-                border-radius: 6px;
-                font-size: 13px;
-                font-weight: 500;
-                cursor: not-allowed;
-                white-space: nowrap;
-            }
-            .page-info {
-                color: #94a3b8;
-                font-size: 13px;
-                margin: 0 6px;
-            }
-            .page-info strong {
-                color: #e2e8f0;
-            }
-        </style>
-
-        <style>
-            .row-blocked {
-                opacity: 0.55;
-            }
-
-            .status-badge {
-                font-size: 11px;
-                font-weight: 600;
-                padding: 3px 8px;
-                border-radius: 4px;
-                background: #334155;
-                color: #cbd5e1;
-            }
-
-            .badge-blocked {
-                background: rgba(239, 68, 68, 0.15);
-                color: #ef4444;
-            }
-
-            .badge-vip {
-                background: rgba(234, 179, 8, 0.15);
-                color: #eab308;
-            }
-        </style>
-
     {{end}}
 
 </main>
 
-<div id="toast"></div>
+<div id="toast"><i class="ti ti-circle-check"></i><span></span></div>
 
 <script>
-    function makeVip(userId) {
-        if (!confirm("Bu foydalanuvchini VIP qilmoqchimisiz?")) {
-            return;
-        }
+    (function(){
+        var $=function(s,r){return (r||document).querySelector(s)}, $$=function(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))};
 
-        fetch(`/admin/bot-users/${userId}/vip`, {
-            method: "POST"
-        })
-            .then(response => {
-                if (response.ok || response.redirected) {
-                    window.location.reload();
-                } else {
-                    alert("Xatolik yuz berdi. Qaytadan urinib ko'ring.");
-                }
-            })
-            .catch(error => {
-                console.error("VIP qilishda xatolik:", error);
-                alert("Server bilan bog'lanishda xatolik yuz berdi.");
+        /* ---------- toast ---------- */
+        window.showToast=function(msg){var t=$('#toast');$('span',t).textContent=msg;t.classList.add('show');clearTimeout(t._h);t._h=setTimeout(function(){t.classList.remove('show')},2600)};
+
+        /* ---------- theme ---------- */
+        function setTheme(t){document.documentElement.setAttribute('data-theme',t);$('#themeBtn i').className='ti '+(t==='dark'?'ti-moon':'ti-sun');try{localStorage.setItem('ap-theme',t)}catch(e){}}
+        var saved='dark';try{saved=localStorage.getItem('ap-theme')||'dark'}catch(e){}
+        setTheme(saved);
+        $('#themeBtn').onclick=function(){setTheme(document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark')};
+
+        /* ---------- clock + greeting ---------- */
+        function tick(){var d=new Date(),p=function(n){return String(n).padStart(2,'0')};$('#clock').textContent=p(d.getHours())+':'+p(d.getMinutes())+':'+p(d.getSeconds())}
+        tick();setInterval(tick,1000);
+        var g=$('#greet');if(g){var h=new Date().getHours();var w=h<6?'Xayrli tun':h<12?'Xayrli tong':h<18?'Xayrli kun':'Xayrli kech';g.innerHTML=w+', <span>Admin</span> 👋'}
+
+        /* ---------- avatars (UTF-8 safe initials) ---------- */
+        $$('[data-initial]').forEach(function(el){var s=(el.getAttribute('data-initial')||'').trim();if(s){el.textContent=Array.from(s)[0].toUpperCase()}});
+
+        /* ---------- ripple ---------- */
+        document.addEventListener('click',function(e){var b=e.target.closest('.btn');if(!b)return;var r=document.createElement('span');r.className='ripple';var s=Math.max(b.offsetWidth,b.offsetHeight),rc=b.getBoundingClientRect();r.style.cssText='width:'+s+'px;height:'+s+'px;left:'+(e.clientX-rc.left-s/2)+'px;top:'+(e.clientY-rc.top-s/2)+'px';b.appendChild(r);setTimeout(function(){r.remove()},600)});
+
+        /* ---------- copy on click ---------- */
+        document.addEventListener('click',function(e){var c=e.target.closest('[data-copy]');if(!c)return;e.stopPropagation();navigator.clipboard.writeText(c.getAttribute('data-copy')).then(function(){showToast('Nusxalandi: '+c.getAttribute('data-copy'))})});
+
+        /* ---------- reveal + counters ---------- */
+        function countUp(el){var raw=el.textContent.replace(/\s/g,'');var n=parseFloat(raw);if(isNaN(n))return;var t0=null,dur=1200;function f(ts){if(!t0)t0=ts;var p=Math.min((ts-t0)/dur,1),e=1-Math.pow(1-p,3);el.textContent=Math.round(n*e).toLocaleString('en-US').replace(/,/g,' ');if(p<1)requestAnimationFrame(f)}requestAnimationFrame(f)}
+        var io=new IntersectionObserver(function(es){es.forEach(function(en){if(en.isIntersecting){en.target.classList.add('in');$$('.count',en.target).forEach(countUp);$$('.stat-bar b[data-w]',en.target).forEach(function(b){b.style.width=b.getAttribute('data-w')+'%'});io.unobserve(en.target)}})},{threshold:.1});
+        $$('.reveal').forEach(function(el){io.observe(el)});
+
+        /* ---------- generic table: search / chips / sort / csv ---------- */
+        function rowsOf(id){var t=document.getElementById(id);return t?$$('tbody tr',t).filter(function(r){return !r.querySelector('.empty-state')}):[]}
+        var state={};
+        function apply(id){
+            var st=state[id]||{q:'',v:'',type:''},rows=rowsOf(id),shown=0;
+            rows.forEach(function(r){
+                var ok=true;
+                if(st.q&&r.textContent.toLowerCase().indexOf(st.q)<0)ok=false;
+                if(st.v){var sv=r.getAttribute('data-status')||r.getAttribute('data-state');if(sv!==st.v)ok=false}
+                if(st.type&&r.getAttribute('data-type')!==st.type)ok=false;
+                r.classList.toggle('hidden-row',!ok);if(ok)shown++;
             });
-    }
-
-    function blockUser(userId) {
-        if (!confirm("Bu foydalanuvchini bloklamoqchimisiz?")) {
-            return;
+            var nr=document.getElementById(id).closest('.card').querySelector('.no-result');
+            if(nr)nr.style.display=(rows.length&&!shown)?'block':'none';
         }
+        function S(id){return state[id]||(state[id]={q:'',v:'',type:''})}
+        $$('[data-search]').forEach(function(inp){inp.addEventListener('input',function(){S(inp.getAttribute('data-search')).q=inp.value.toLowerCase().trim();apply(inp.getAttribute('data-search'))})});
+        $$('.chips[data-filter]').forEach(function(box){var id=box.getAttribute('data-filter');box.addEventListener('click',function(e){var c=e.target.closest('.chip');if(!c)return;$$('.chip',box).forEach(function(x){x.classList.remove('on')});c.classList.add('on');S(id).v=c.getAttribute('data-v');apply(id)})});
 
-        fetch(`/admin/bot-users/${userId}/block`, {
-            method: "POST"
-        })
-            .then(response => {
-                if (response.ok || response.redirected) {
-                    window.location.reload();
-                } else {
-                    alert("Xatolik yuz berdi. Qaytadan urinib ko'ring.");
-                }
-            })
-            .catch(error => {
-                console.error("Bloklashda xatolik:", error);
-                alert("Server bilan bog'lanishda xatolik yuz berdi.");
-            });
-    }
+        /* top search: forwards to first table's search */
+        var ps=$('#pageSearch');
+        ps.addEventListener('input',function(){var first=$('[data-search]');if(first){first.value=ps.value;first.dispatchEvent(new Event('input'))}});
+        document.addEventListener('keydown',function(e){if((e.key==='/'||(e.ctrlKey&&e.key.toLowerCase()==='k'))&&!/INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName)){e.preventDefault();ps.focus()}});
+
+        /* sorting */
+        $$('table').forEach(function(tb){$$('thead th.sortable',tb).forEach(function(th,_){th.addEventListener('click',function(){
+            var idx=Array.prototype.indexOf.call(th.parentNode.children,th),asc=!th.classList.contains('asc');
+            $$('th',tb).forEach(function(x){x.classList.remove('asc','desc')});th.classList.add(asc?'asc':'desc');
+            var body=$('tbody',tb),rows=$$('tr',body).filter(function(r){return !r.querySelector('.empty-state')});
+            function val(r){var c=r.children[idx],t=(c.getAttribute('data-bal')||c.textContent).trim().replace(/^#/,'');var n=parseFloat(t.replace(/\s/g,''));return isNaN(n)?t.toLowerCase():n}
+            rows.sort(function(a,b){var x=val(a),y=val(b);return (x>y?1:x<y?-1:0)*(asc?1:-1)});
+            rows.forEach(function(r){body.appendChild(r)});
+        })})});
+
+        /* CSV export */
+        window.exportCSV=function(id,name){var t=document.getElementById(id);if(!t)return;var out=[];
+            $$('tr',t).forEach(function(r){if(r.classList.contains('hidden-row')||r.querySelector('.empty-state'))return;
+                var cells=$$('th,td',r).slice(0,-1).map(function(c){return '"'+c.textContent.replace(/\s+/g,' ').trim().replace(/"/g,'""')+'"'});out.push(cells.join(','))});
+            var a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\ufeff'+out.join('\n')],{type:'text/csv;charset=utf-8'}));a.download=name;a.click();showToast('CSV yuklab olindi')};
+
+        /* ---------- admins page totals ---------- */
+        if($('#sumBalance')){var tot=0,best=null,bv=-1;$$('#adminsTable tbody tr').forEach(function(r){var b=r.querySelector('.bal');if(!b)return;var v=parseFloat(b.getAttribute('data-bal'))||0;tot+=v;if(v>bv){bv=v;var n=r.querySelector('[data-admin-name]');best=n?n.getAttribute('data-admin-name'):null}});
+            var el=$('#sumBalance');el.textContent=String(tot);countUp(el);$('#maxBalance').textContent=best?('@'+best):'—'}
+        /* ---------- zero-balance admins section ---------- */
+        var zc=rowsOf('zeroAdminsTable').length;
+        if($('#zeroCount')){
+            $('#zeroCount').textContent=zc;
+            $('#zeroBadge').textContent=zc+' ta';
+            if(zc>0)$('#zeroCard').style.display='';
+        }
+        /* ---------- dashboard analytics (from bots table) ---------- */
+        var bt=document.getElementById('botsTable');
+        if(bt){
+            var bots=rowsOf('botsTable').map(function(r){return {r:r,name:r.getAttribute('data-name'),type:r.getAttribute('data-type'),users:parseInt(r.getAttribute('data-users'))||0,on:r.getAttribute('data-state')==='on',id:r.getAttribute('data-id')}});
+            var total=bots.length,maxU=Math.max.apply(null,bots.map(function(b){return b.users}).concat([1]));
+            var colors=['#8b5cf6','#22d3ee','#f472b6','#34d399','#fbbf24','#60a5fa','#fb7185','#a3e635'];
+
+            /* star rating per row (1-5, relative to the biggest bot) */
+            function stars(n){var s='';for(var i=1;i<=5;i++)s+='<i class="ti ti-star-filled'+(i>n?' off':'')+'"></i>';return s}
+            function rate(u){return u<=0?0:Math.max(1,Math.round(u/maxU*5))}
+            bots.forEach(function(b){var c=b.r.querySelector('.rate');if(c)c.innerHTML=stars(rate(b.users))});
+
+            /* types */
+            var types={};bots.forEach(function(b){types[b.type]=(types[b.type]||0)+1});
+            var keys=Object.keys(types).sort(function(a,b){return types[b]-types[a]});
+            $('#donutTotal').textContent=total;
+            var svg=$('#donutSvg'),R=48,C=2*Math.PI*R,off=0,html='<circle cx="60" cy="60" r="'+R+'" stroke="rgba(128,128,160,.15)"/>',leg='';
+            keys.forEach(function(k,i){var frac=types[k]/total,len=frac*C,col=colors[i%colors.length];
+                html+='<circle cx="60" cy="60" r="'+R+'" stroke="'+col+'" stroke-dasharray="0 '+C+'" data-len="'+len+'" data-c="'+C+'" stroke-dashoffset="'+(-off)+'" data-k="'+k+'"/>';
+                off+=len;
+                leg+='<div class="leg" style="--c:'+col+'"><i></i>'+k+'<em>'+types[k]+'<small>'+Math.round(frac*100)+'%</small></em></div>'});
+            if(!total){leg='<div class="leg" style="--c:#888"><i></i>Ma\'lumot yo\'q</div>'}
+            svg.innerHTML=html;$('#legend').innerHTML=leg;
+            setTimeout(function(){$$('circle[data-len]',svg).forEach(function(c){c.setAttribute('stroke-dasharray',c.getAttribute('data-len')+' '+c.getAttribute('data-c'))})},300);
+            $$('circle[data-k]',svg).forEach(function(c){c.addEventListener('click',function(){var k=c.getAttribute('data-k');var chip=$$('#typeChips .chip').filter(function(x){return x.getAttribute('data-v')===k})[0];if(chip)chip.click()})});
+
+            /* type chips */
+            var tc='<span class="chip on" data-v="">Barcha turlar</span>'+keys.map(function(k){return '<span class="chip" data-v="'+k+'">'+k+' ('+types[k]+')</span>'}).join('');
+            var tbox=$('#typeChips');tbox.innerHTML=tc;
+            tbox.addEventListener('click',function(e){var c=e.target.closest('.chip');if(!c)return;$$('.chip',tbox).forEach(function(x){x.classList.remove('on')});c.classList.add('on');S('botsTable').type=c.getAttribute('data-v');apply('botsTable')});
+
+            /* leaderboard */
+            var top=bots.slice().sort(function(a,b){return b.users-a.users}).slice(0,5);
+            var bh='';top.forEach(function(b,i){bh+='<a class="rank" href="/admin/bots/'+b.id+'" style="animation-delay:'+(i*.08)+'s"><div class="medal">'+(i+1)+'</div><div class="rank-info"><div class="rank-name"></div><div class="rank-meta"><span class="stars">'+stars(rate(b.users))+'</span><span class="tag-type"></span></div><div class="rank-bar"><b data-w="'+Math.round(b.users/maxU*100)+'"></b></div></div><div class="rank-score">'+b.users+'<small>a\'zo</small></div></a>'});
+            var board=$('#board');board.innerHTML=bh||'<div class="no-result" style="display:block">Hali botlar yo\'q</div>';
+            $$('.rank',board).forEach(function(el,i){$('.rank-name',el).textContent=top[i].name;$('.tag-type',el).textContent=top[i].type});
+            setTimeout(function(){$$('.rank-bar b',board).forEach(function(b){b.style.width=b.getAttribute('data-w')+'%'})},400);
+
+            /* insights */
+            var sum=bots.reduce(function(a,b){return a+b.users},0);
+            $('#insAvg').textContent=total?Math.round(sum/total):0;
+            $('#insTop').textContent=top.length?top[0].name:'—';$('#insType').textContent=keys.length?keys[0]+' ('+types[keys[0]]+')':'—';
+            $('#insEmpty').textContent=bots.filter(function(b){return b.users===0}).length;
+            $('#typeTotalNote').textContent=keys.length+' xil tur';
+
+            /* active ring + bars */
+            var act=bots.filter(function(b){return b.on}).length,pct=total?Math.round(act/total*100):0,RR=50,CC=2*Math.PI*RR;
+            $('#ringPct').textContent=pct+'%';$('#ringTxt').textContent=act;$('#ringOpen').textContent=total;$('#ringPaused').textContent=total-act;
+            setTimeout(function(){$('#ringFg').setAttribute('stroke-dasharray',(CC*pct/100)+' '+CC);$('#barActive').style.width=pct+'%';$('#barOff').style.width=(total?100-pct:0)+'%'},400);
+        }
+    })();
+
+    /* ---------- global actions ---------- */
+    function toggleToken(btn){var m=document.getElementById('tokenMask'),f=document.getElementById('tokenFull');if(!f)return;
+        if(f.style.display==='none'){m.style.display='none';f.style.display='inline';btn.innerHTML='<i class="ti ti-eye-off"></i> <span>Yashirish</span>'}
+        else{m.style.display='inline';f.style.display='none';btn.innerHTML='<i class="ti ti-eye"></i> <span>Ko\'rish</span>'}}
+    function copyToken(){var f=document.getElementById('tokenFull');if(!f)return;navigator.clipboard.writeText(f.textContent).then(function(){showToast('Token nusxalandi!')})}
+    function postAction(url,msg){fetch(url,{method:'POST'}).then(function(r){if(r.ok||r.redirected){showToast(msg);setTimeout(function(){location.reload()},700)}else{alert('Xatolik yuz berdi. Qaytadan urinib ko\'ring.')}}).catch(function(){alert('Server bilan bog\'lanishda xatolik yuz berdi.')})}
+    function makeVip(id){if(confirm('Bu foydalanuvchini VIP qilmoqchimisiz?'))postAction('/admin/bot-users/'+id+'/vip','VIP holati o\'zgartirildi 👑')}
+    function blockUser(id){if(confirm('Bu foydalanuvchini bloklamoqchimisiz?'))postAction('/admin/bot-users/'+id+'/toggle-block','Blok holati o\'zgartirildi 🚫')}
 </script>
-
-<script>
-
-    function makeVip(userId) {
-        if (confirm('Bu foydalanuvchini VIP qilmoqchimisiz?')) {
-            // keyinchalik backend endpoint chaqirasiz
-            console.log('VIP qilindi:', userId);
-            // window.location.reload() yoki AJAX
-        }
-    }
-
-    function blockUser(userId) {
-        if (confirm('Bu foydalanuvchini bloklamoqchimisiz?')) {
-            console.log('Bloklandi:', userId);
-            // backend ga so'rov yuborish
-        }
-    }
-
-    function toggleToken(btn) {
-        var mask = document.getElementById('tokenMask');
-        var full = document.getElementById('tokenFull');
-        if (full.style.display === 'none') {
-            mask.style.display = 'none';
-            full.style.display = 'inline';
-            btn.innerHTML = '<i class="ti ti-eye-off"></i> Yashirish';
-        } else {
-            mask.style.display = 'inline';
-            full.style.display = 'none';
-            btn.innerHTML = '<i class="ti ti-eye"></i> Ko\'rish';
-        }
-    }
-
-    function copyToken() {
-        const full = document.getElementById('tokenFull').textContent;
-        if (!full) return;
-
-        navigator.clipboard.writeText(full).then(() => {
-            showToast('Token nusxalandi!');
-        });
-    }
-
-    function showToast(msg) {
-        var t = document.getElementById('toast');
-        t.textContent = msg;
-        t.classList.add('show');
-        setTimeout(function () {
-            t.classList.remove('show');
-        }, 2800);
-    }
-
-</script>
-
-
 </body>
 </html>

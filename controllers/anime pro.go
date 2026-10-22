@@ -242,8 +242,7 @@ func HandleAnimeBotMessagePro(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *t
 				bot,
 				chatID,
 				"📢 Reklama yuboriladigan kanal ID sini yuboring.\n\n"+
-					"Masalan:\n"+
-					"`-1001234567890`",
+					"",
 			)
 			return
 
@@ -3102,31 +3101,28 @@ func HandlePromoChannelAdd(bot *tgbotapi.BotAPI, b *models.CreatedBot, msg *tgbo
 
 	o := orm.NewOrm()
 
-	existing := &models.PromoChannel{ // models.PromoChannel deb o'zgartirildi
+	// Kanal allaqachon mavjudligini tekshiramiz
+	existing := &models.PromoChannel{
 		Bot:       b,
-		ChannelID: channelID,
+		ChannelID: chat.ID,
 	}
 
 	err = o.Read(existing, "Bot", "ChannelID")
 
+	// Yangi ma'lumotlar
+	existing.Bot = b
+	existing.ChannelID = chat.ID
+	existing.UserName = chat.UserName
+	existing.Title = chat.Title
+	existing.IsActive = true
+
 	if err == nil {
-		sendUserBot(
-			bot,
-			chatID,
-			"⚠️ Bu kanal allaqachon reklama kanallari ro‘yxatiga qo‘shilgan.",
-		)
-		return
+		// Kanal allaqachon bor bo'lsa, ma'lumotlarini yangilab qo'yamiz (Title, Username va hokazo)
+		_, err = o.Update(existing)
+	} else {
+		// Kanal yo'q bo'lsa, yangi qo'shamiz
+		_, err = o.Insert(existing)
 	}
-
-	promoChannel := &models.PromoChannel{ // models.PromoChannel deb o'zgartirildi
-		Bot:       b,
-		ChannelID: chat.ID,
-		UserName:  chat.UserName,
-		Title:     chat.Title,
-		IsActive:  true,
-	}
-
-	_, err = o.Insert(promoChannel)
 
 	if err != nil {
 		log.Printf("❌ PromoChannel saqlashda xatolik: %v", err)
